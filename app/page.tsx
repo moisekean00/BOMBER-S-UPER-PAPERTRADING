@@ -37,6 +37,9 @@ export default async function Landing() {
               <Link className="btn ghost" href="/regolamento" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.25)" }}>Regolamento</Link>
             </div>
           </div>
+          <div style={{ display: "grid", justifyItems: "center", gap: 24 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/stemma.svg" alt="Super Bomber Paper Trader" width={240} height={240} style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.45))" }} />
           <div className="phone">
             <div className="eyebrow" style={{ marginBottom: 10 }}>Classifica · esempio</div>
             {DEMO.map((d) => (
@@ -51,6 +54,7 @@ export default async function Landing() {
                 </div>
               </div>
             ))}
+          </div>
           </div>
         </div>
       </section>

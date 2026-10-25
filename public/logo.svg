@@ -1,1 +1,70 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="sbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c3a7a"/><stop offset="1" stop-color="#0a1a3a"/></linearGradient><clipPath id="sbc"><circle cx="28" cy="29" r="18"/></clipPath></defs><rect width="64" height="64" rx="15" fill="url(#sbg)"/><circle cx="28" cy="29" r="18" fill="#fff"/><g clip-path="url(#sbc)" fill="#0a1a3a"><polygon points="28.0,22.8 33.9,27.1 31.6,34.0 24.4,34.0 22.1,27.1"/><polygon points="33.8,21.0 31.8,14.7 37.1,10.9 42.4,14.7 40.4,21.0"/><polygon points="37.4,32.1 42.7,28.2 48.1,32.1 46.0,38.3 39.4,38.3"/><polygon points="28.0,38.9 33.3,42.8 31.3,49.0 24.7,49.0 22.7,42.8"/><polygon points="18.6,32.1 16.6,38.3 10.0,38.3 7.9,32.1 13.3,28.2"/><polygon points="22.2,21.0 15.6,21.0 13.6,14.7 18.9,10.9 24.2,14.7"/></g><path d="M28.0 22.8L28.0 17.5 M33.9 27.1L38.9 25.4 M31.6 34.0L34.8 38.3 M24.4 34.0L21.2 38.3 M22.1 27.1L17.1 25.4" stroke="#0a1a3a" stroke-width="1.6" stroke-linecap="round"/><circle cx="45" cy="45" r="12.5" fill="#e8b931" stroke="#0a1a3a" stroke-width="2.5"/><circle cx="45" cy="45" r="9" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="1.2"/><text x="45" y="50.2" text-anchor="middle" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="800" fill="#0a1a3a">€</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><defs><linearGradient id="ig" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c3a7a"/><stop offset="1" stop-color="#0a1a3a"/></linearGradient><clipPath id="ic"><rect width="200" height="200" rx="46"/></clipPath></defs><rect width="200" height="200" rx="46" fill="url(#ig)"/>
+<g clip-path="url(#ic)"><g opacity="0.1"><rect x="14" y="0" width="2" height="200" fill="#fff"/><rect x="28" y="0" width="2" height="200" fill="#fff"/><rect x="42" y="0" width="2" height="200" fill="#fff"/><rect x="56" y="0" width="2" height="200" fill="#fff"/><rect x="70" y="0" width="2" height="200" fill="#fff"/><rect x="84" y="0" width="2" height="200" fill="#fff"/><rect x="98" y="0" width="2" height="200" fill="#fff"/><rect x="112" y="0" width="2" height="200" fill="#fff"/><rect x="126" y="0" width="2" height="200" fill="#fff"/><rect x="140" y="0" width="2" height="200" fill="#fff"/><rect x="154" y="0" width="2" height="200" fill="#fff"/><rect x="168" y="0" width="2" height="200" fill="#fff"/><rect x="182" y="0" width="2" height="200" fill="#fff"/><rect x="196" y="0" width="2" height="200" fill="#fff"/></g>
+<svg x="0" y="14" width="200" height="200" viewBox="40 8 180 180"><defs>
+    <pattern id="pin" width="9" height="10" patternUnits="userSpaceOnUse"><rect width="9" height="10" fill="#14295a"/><rect x="0" width="1.4" height="10" fill="#8fa6d6" opacity="0.55"/></pattern>
+  </defs>
+  <g stroke="#14110f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <!-- tail -->
+    <path d="M70 200 C 40 205, 34 185, 30 170" fill="none"/>
+    <path d="M30 170 C 22 164, 22 156, 30 156 C 34 160, 34 166, 30 170 Z" fill="#14110f"/>
+    <!-- legs -->
+    <path d="M86 214 L 84 268 L 110 268 L 112 214 Z" fill="url(#pin)"/>
+    <path d="M128 214 L 130 268 L 156 268 L 154 214 Z" fill="url(#pin)"/>
+    <!-- hooves -->
+    <path d="M80 268 L 112 268 L 114 284 L 78 284 Z" fill="#2b2b2b"/>
+    <path d="M128 268 L 160 268 L 162 284 L 126 284 Z" fill="#2b2b2b"/>
+    <!-- football under right hoof -->
+    <circle cx="180" cy="270" r="18" fill="#fff"/>
+    <polygon points="180,263 186.5,267.5 184,275 176,275 173.5,267.5" fill="#14110f" stroke-width="1.5"/>
+    <path d="M180 252 L180 263 M186.5 267.5 L197 264 M184 275 L190 285 M176 275 L170 285 M173.5 267.5 L163 264" fill="none" stroke-width="2"/>
+    <!-- jacket body -->
+    <path d="M76 132 C 72 160, 74 196, 80 222 L 160 222 C 166 196, 168 160, 164 132 C 150 124, 90 124, 76 132 Z" fill="url(#pin)"/>
+    <!-- shirt + tie -->
+    <path d="M104 128 L 120 172 L 136 128 Z" fill="#fff"/>
+    <path d="M114 134 L 126 134 L 123 142 L 128 170 L 120 180 L 112 170 L 117 142 Z" fill="#e8b931" stroke-width="3"/>
+    <!-- lapels -->
+    <path d="M104 128 L 96 150 L 114 158 Z" fill="#0d1d42" stroke-width="3"/>
+    <path d="M136 128 L 144 150 L 126 158 Z" fill="#0d1d42" stroke-width="3"/>
+    <!-- left arm down, holding briefcase? -> holding phone. keep simple: hand on hip -->
+    <path d="M78 138 C 60 150, 56 172, 66 188 L 80 182 C 74 170, 78 158, 86 150 Z" fill="url(#pin)"/>
+    <circle cx="72" cy="190" r="9" fill="#f2c14e"/>
+    <!-- right arm raised with cash -->
+    <path d="M162 138 C 184 130, 200 112, 206 90 L 192 86 C 186 106, 172 120, 154 126 Z" fill="url(#pin)"/>
+    <g transform="translate(18 2) rotate(-14 182 70)">
+      <rect x="160" y="52" width="46" height="26" rx="3" fill="#7fbf6a"/>
+      <rect x="164" y="48" width="46" height="26" rx="3" fill="#8fd27a"/>
+      <circle cx="187" cy="61" r="7" fill="#c7efb9" stroke-width="2.5"/>
+      <text x="187" y="65.5" text-anchor="middle" font-family="Arial Black, Arial" font-weight="900" font-size="11" fill="#14110f" stroke="none">$</text>
+    </g>
+    <circle cx="199" cy="84" r="10" fill="#f2c14e"/>
+    <!-- horns -->
+    <path d="M86 52 C 64 50, 52 36, 54 14 C 62 28, 74 34, 92 36 Z" fill="#fff6dc"/>
+    <path d="M154 52 C 176 50, 188 36, 186 14 C 178 28, 166 34, 148 36 Z" fill="#fff6dc"/>
+    <!-- ears -->
+    <path d="M80 62 C 64 60, 54 66, 50 76 C 62 80, 74 78, 84 72 Z" fill="#f2c14e"/>
+    <path d="M160 62 C 176 60, 186 66, 190 76 C 178 80, 166 78, 156 72 Z" fill="#f2c14e"/>
+    <!-- head -->
+    <path d="M84 40 C 98 30, 142 30, 156 40 C 166 52, 164 74, 158 90 L 82 90 C 76 74, 74 52, 84 40 Z" fill="#f2c14e"/>
+    <!-- hair tuft -->
+    <path d="M104 36 C 106 26, 112 24, 114 32 C 116 22, 124 22, 126 32 C 128 24, 136 26, 136 36" fill="#f2c14e"/>
+    <!-- muzzle (big, overbite) -->
+    <path d="M78 92 C 74 76, 166 76, 162 92 C 168 110, 156 128, 120 128 C 84 128, 72 110, 78 92 Z" fill="#f7d98a"/>
+    <!-- nostrils -->
+    <ellipse cx="104" cy="100" rx="5" ry="7" fill="#14110f" stroke-width="0"/>
+    <ellipse cx="136" cy="100" rx="5" ry="7" fill="#14110f" stroke-width="0"/>
+    <!-- grin -->
+    <path d="M134 118 C 140 120, 146 116, 150 110" fill="none" stroke-width="3.5"/>
+    <!-- nose ring -->
+    <circle cx="120" cy="114" r="9" fill="none" stroke="#e8b931" stroke-width="5"/>
+    <circle cx="120" cy="114" r="9" fill="none" stroke-width="1.5"/>
+    <!-- eyes (Simpsons-style big touching circles) -->
+    <circle cx="106" cy="62" r="15" fill="#fff"/>
+    <circle cx="134" cy="62" r="15" fill="#fff"/>
+    <circle cx="110" cy="64" r="3.2" fill="#14110f" stroke-width="0"/>
+    <circle cx="130" cy="64" r="3.2" fill="#14110f" stroke-width="0"/>
+    <!-- smug lids -->
+    <path d="M91 58 C 96 48, 116 48, 121 58 Z" fill="#f2c14e" stroke-width="3"/>
+    <path d="M119 58 C 124 48, 144 48, 149 58 Z" fill="#f2c14e" stroke-width="3"/>
+  </g>
+</svg></g>
+</svg>
