@@ -30,6 +30,9 @@ create table if not exists positions (
   primary key (user_id, symbol)
 );
 
+-- Acquisti a leva su azioni ed ETF (aggiunto il 25/10).
+alter table positions add column if not exists debt numeric not null default 0;
+
 -- Formazione inviata in una finestra: privata fino alla chiusura.
 create table if not exists lineups (
   user_id uuid not null references profiles on delete cascade,

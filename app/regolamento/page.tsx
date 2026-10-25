@@ -63,6 +63,7 @@ export default function Rules() {
           <li><b>ETF ed ETC</b> (azionari, settoriali, materie prime): sì.</li>
           <li><b>Obbligazioni:</b> solo tramite ETF obbligazionari.</li>
           <li><b>Prodotti a leva e inversi:</b> sì, leva massima 5x.</li>
+          <li><b>Acquisto a leva:</b> azioni ed ETF si possono comprare con leva da 1x a 5x. Metti il capitale, il resto è un prestito senza interessi: la posizione vale esposizione meno prestito, quindi guadagni e perdite si moltiplicano. Se cambi quantità o leva, il prestito si ricalcola su tutta la posizione.</li>
           <li><b>Futures:</b> tutti, long o short, frazioni di contratto, margine 20%.</li>
           <li><b>Opzioni:</b> solo acquisto, nessun limite di peso. Si perde al massimo il premio.</li>
           <li><b>No:</b> vendita di opzioni, vendita allo scoperto di azioni (per il ribasso usa futures short, ETP inversi o put), crypto.</li>

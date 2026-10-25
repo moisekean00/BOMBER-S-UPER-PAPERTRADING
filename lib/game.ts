@@ -3,7 +3,7 @@ import { currentWindow, type Window } from "./calendar";
 import { adminClient, userClient } from "./supabase/server";
 import { officialClose, officialFx, pricesFor, toPosition, toProfile } from "./db";
 import { kindMatches, parseOcc } from "./prices";
-import { applyLineup, KIND_LABEL, type Kind, type Position } from "./rules";
+import { applyLineup, KIND_LABEL, MARGIN_KINDS, type Kind, type Position } from "./rules";
 
 /** Profilo del giocatore; se manca (iscrizione fatta prima delle tabelle) lo crea. */
 export async function ensureProfile(user: { id: string; user_metadata?: Record<string, any> }) {
@@ -89,7 +89,7 @@ export async function sanitize(raw: unknown[], active: Position[], date: string)
     const prev = old.get(symbol);
     const qty = num(r.qty);
     if (prev && prev.kind === kind) {
-      out.push({ ...prev, qty, leverage: kind === "etp" ? num(r.leverage, prev.leverage) : prev.leverage });
+      out.push({ ...prev, qty, leverage: kind === "etp" || MARGIN_KINDS.includes(kind) ? num(r.leverage, prev.leverage) : prev.leverage });
       continue;
     }
     try {
@@ -109,7 +109,7 @@ export async function sanitize(raw: unknown[], active: Position[], date: string)
         currency: i.currency,
         qty,
         multiplier: kind === "option" ? 100 : 1,
-        leverage: kind === "etp" ? num(r.leverage, 1) : 1,
+        leverage: kind === "etp" || MARGIN_KINDS.includes(kind) ? num(r.leverage, 1) : 1,
         margin: 0,
         refPrice: null,
         expiry: i.option?.expiry ?? null,

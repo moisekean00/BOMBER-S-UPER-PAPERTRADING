@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { applyLineup, KIND_LABEL, MANDATORY, type Kind, type Position, type Prices, type Fx } from "@/lib/rules";
+import { applyLineup, KIND_LABEL, MANDATORY, MARGIN_KINDS, MAX_LEVERAGE, positionValue, type Kind, type Position, type Prices, type Fx } from "@/lib/rules";
 import type { Window } from "@/lib/calendar";
 import { eur, pctChange } from "./format";
 
@@ -93,7 +93,7 @@ export function LineupEditor() {
       currency: i.currency,
       qty: 0,
       multiplier: kind === "option" ? 100 : 1,
-      leverage: kind === "etp" ? leverage : 1,
+      leverage: kind === "etp" || MARGIN_KINDS.includes(kind) ? leverage : 1,
       margin: 0,
       refPrice: null,
       expiry: i.option?.expiry ?? null,
@@ -102,7 +102,8 @@ export function LineupEditor() {
       optType: i.option?.optType ?? null,
     };
     const unit = unitEur(base, newPrices, newFx);
-    base.qty = kind === "option" ? contracts : amountEur / unit;
+    // Azioni ed ETF: l'importo è il capitale tuo, l'esposizione è capitale x leva.
+    base.qty = kind === "option" ? contracts : (amountEur * (MARGIN_KINDS.includes(kind) ? leverage : 1)) / unit;
     delete newPrices[i.option?.underlying ?? "__"];
     setPrices(newPrices);
     setFx(newFx);
@@ -195,9 +196,12 @@ export function LineupEditor() {
             {target.length === 0 && (
               <tr><td colSpan={6} className="muted">Rosa vuota. Cerca un titolo qui sotto e compralo.</td></tr>
             )}
-            {target.map((p) => (
-              <EditRow key={p.symbol} p={p} prices={prices} fx={fx} margin={r?.positions.find((x) => x.symbol === p.symbol)?.margin ?? 0} onChange={(patch) => update(p.symbol, patch)} onRemove={() => remove(p.symbol)} />
-            ))}
+            {target.map((p) => {
+              const done = r?.positions.find((x) => x.symbol === p.symbol);
+              let net: number | null = null;
+              try { net = done ? positionValue(done, prices, fx) : null; } catch {}
+              return <EditRow key={p.symbol} p={p} prices={prices} fx={fx} margin={done?.margin ?? 0} net={net} onChange={(patch) => update(p.symbol, patch)} onRemove={() => remove(p.symbol)} />;
+            })}
           </tbody>
         </table>
       </div>
@@ -226,17 +230,24 @@ export function LineupEditor() {
   );
 }
 
-function EditRow({ p, prices, fx, margin, onChange, onRemove }: { p: Position; prices: Prices; fx: Fx; margin: number; onChange: (patch: Partial<Position>) => void; onRemove: () => void }) {
+function EditRow({ p, prices, fx, margin, net, onChange, onRemove }: { p: Position; prices: Prices; fx: Fx; margin: number; net: number | null; onChange: (patch: Partial<Position>) => void; onRemove: () => void }) {
   const unit = unitEur(p, prices, fx);
   const value = p.qty * unit;
+  const levered = MARGIN_KINDS.includes(p.kind);
+  const lev = levered ? p.leverage || 1 : 1;
+  // Per azioni ed ETF si scrive il capitale proprio; l'esposizione è capitale x leva.
+  const capital = levered ? (net ?? value / lev) : value;
   const [text, setText] = useState<string>("");
-  const current = p.kind === "option" ? p.qty : Math.round(value);
+  const current = p.kind === "option" ? p.qty : Math.round(capital);
   useEffect(() => setText(String(current)), [current]);
 
   function commit(v: string) {
     const n = Number(v.replace(/\./g, "").replace(",", "."));
     if (!isFinite(n)) return;
-    onChange({ qty: p.kind === "option" ? n : n / unit });
+    onChange({ qty: p.kind === "option" ? n : (n * lev) / unit });
+  }
+  function setLev(l: number) {
+    onChange({ leverage: l, qty: (capital * l) / unit });
   }
   return (
     <tr>
@@ -252,6 +263,13 @@ function EditRow({ p, prices, fx, margin, onChange, onRemove }: { p: Position; p
             <span className="muted" style={{ fontSize: 12 }}>leva (es. 3, -2)</span>
           </div>
         )}
+        {levered && (
+          <div style={{ marginTop: 6 }}>
+            <select style={{ width: 84, padding: "4px 6px" }} value={lev} onChange={(e) => setLev(Number(e.target.value))} aria-label="Leva">
+              {Array.from({ length: MAX_LEVERAGE }, (_, i) => i + 1).map((l) => <option key={l} value={l}>{l === 1 ? "No leva" : `Leva ${l}x`}</option>)}
+            </select>
+          </div>
+        )}
       </td>
       <td className="r num">{prices[p.symbol]?.toLocaleString("it-IT", { maximumFractionDigits: 4 })} <span className="muted" style={{ fontSize: 12 }}>{p.currency}</span></td>
       <td className="r">
@@ -264,13 +282,13 @@ function EditRow({ p, prices, fx, margin, onChange, onRemove }: { p: Position; p
             <input style={{ width: 120, textAlign: "right" }} inputMode="decimal" value={text.replace("-", "")} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(String((p.qty < 0 ? -1 : 1) * Number(e.target.value.replace(/\./g, "").replace(",", "."))))} aria-label="Esposizione in euro" />
           </div>
         ) : (
-          <input style={{ width: 130, textAlign: "right" }} inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} aria-label={p.kind === "option" ? "Contratti" : "Controvalore in euro"} />
+          <input style={{ width: 130, textAlign: "right" }} inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} onBlur={(e) => commit(e.target.value)} aria-label={p.kind === "option" ? "Contratti" : levered ? "Capitale in euro" : "Controvalore in euro"} />
         )}
         <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-          {p.kind === "option" ? "contratti (x100)" : p.kind === "future" ? `esposizione € · margine ${eur(margin)}` : `€ · ${p.qty.toLocaleString("it-IT", { maximumFractionDigits: 3 })} quote`}
+          {p.kind === "option" ? "contratti (x100)" : p.kind === "future" ? `esposizione € · margine ${eur(margin)}` : levered && lev > 1 ? `capitale € · esposizione ${eur(value)}` : `€ · ${p.qty.toLocaleString("it-IT", { maximumFractionDigits: 3 })} quote`}
         </div>
       </td>
-      <td className="r num">{eur(p.kind === "future" ? margin : value)}</td>
+      <td className="r num">{eur(p.kind === "future" ? margin : levered ? capital : value)}</td>
       <td className="r"><button className="btn danger small" onClick={onRemove} aria-label={`Togli ${p.symbol}`}>✕</button></td>
     </tr>
   );
@@ -285,6 +303,7 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
   const [amount, setAmount] = useState("5000");
   const [contracts, setContracts] = useState("1");
   const [leverage, setLeverage] = useState("2");
+  const [buyLev, setBuyLev] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [chain, setChain] = useState<Chain | null>(null);
@@ -329,7 +348,7 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
 
   function confirm() {
     if (!picked) return;
-    onAdd(picked, kind, Number(amount.replace(/\./g, "").replace(",", ".")), Number(contracts.replace(",", ".")), Number(leverage.replace(",", ".")));
+    onAdd(picked, kind, Number(amount.replace(/\./g, "").replace(",", ".")), Number(contracts.replace(",", ".")), kind === "etp" ? Number(leverage.replace(",", ".")) : buyLev);
     setPicked(null);
     setQ("");
     setChain(null);
@@ -427,11 +446,26 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
               </div>
             ) : (
               <div style={{ width: 180 }}>
-                <label>{kind === "future" ? "Esposizione € (long)" : "Controvalore €"}</label>
+                <label>{kind === "future" ? "Esposizione € (long)" : MARGIN_KINDS.includes(kind) ? "Capitale €" : "Controvalore €"}</label>
                 <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
               </div>
             )}
           </div>
+          {MARGIN_KINDS.includes(kind) && (
+            <div>
+              <label>Leva</label>
+              <div className="seg" style={{ background: "#fff" }}>
+                {Array.from({ length: MAX_LEVERAGE }, (_, i) => i + 1).map((l) => (
+                  <button key={l} className={buyLev === l ? "on" : ""} style={buyLev === l ? { background: "var(--navy)", color: "#fff" } : undefined} onClick={() => setBuyLev(l)}>{l}x</button>
+                ))}
+              </div>
+              {buyLev > 1 && (
+                <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                  Esposizione {eur(Number(amount.replace(/\./g, "").replace(",", ".")) * buyLev)}: metti {eur(Number(amount.replace(/\./g, "").replace(",", ".")))} di cash, il resto è prestito senza interessi. Guadagni e perdite valgono {buyLev} volte: se il titolo scende del {Math.round(100 / buyLev)}% la posizione vale zero.
+                </div>
+              )}
+            </div>
+          )}
           {kind === "future" && <div className="muted" style={{ fontSize: 13 }}>Si blocca il 20% dell&apos;esposizione come margine. Per andare short cambia Long/Short nella tabella dopo averlo aggiunto.</div>}
           <div className="row">
             <button className="btn" onClick={confirm}>Compra</button>

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyLineup, settle, forcedSale, valuePortfolio, type Position } from "./rules.ts";
+import { applyLineup, settle, forcedSale, valuePortfolio, positionValue, type Position, type Prices } from "./rules.ts";
 
 const pos = (symbol: string, kind: Position["kind"], qty: number, extra: Partial<Position> = {}): Position => ({
   symbol, name: symbol, kind, currency: "EUR", qty, multiplier: 1, leverage: 1, margin: 0,
@@ -79,4 +79,22 @@ test("leva oltre 5x e scoperto rifiutati", () => {
   const r = applyLineup([], 100_000, [pos("X", "etp", 1, { leverage: 7 }), pos("ENI", "stock", -1)], { ...prices, X: 1 }, fx, { first: true });
   assert.ok(r.errors.some((e) => e.includes("leva")));
   assert.ok(r.errors.some((e) => e.includes("scoperto")));
+});
+
+test("acquisto a leva: capitale 10.000 con leva 3x, poi il titolo sale del 10%", () => {
+  const p = { ENI: 10 } as Prices;
+  const r = applyLineup([], 100_000, [pos("ENI", "stock", 3000, { leverage: 3 })], p, {}, { first: true });
+  assert.equal(Math.round(r.cash), 90_000);
+  const held = r.positions[0];
+  assert.equal(Math.round(held.debt!), 20_000);
+  assert.equal(Math.round(positionValue(held, { ENI: 11 }, {})), 13_000);
+  assert.deepEqual(applyLineup([], 100_000, [pos("ENI", "stock", 10, { leverage: 6 })], p, {}, { first: true }).errors.filter((e) => e.includes("leva")).length, 1);
+});
+
+test("acquisto a leva: vendere tutto restituisce solo il capitale netto e conta nel 50%", () => {
+  const held = pos("ENI", "stock", 3000, { leverage: 3, debt: 20_000 });
+  const keep = pos("VWCE", "etf_equity", 100);
+  const r = applyLineup([held, keep], 0, [keep], { ENI: 11, VWCE: 100 }, {}, { first: false });
+  assert.equal(Math.round(r.cash), 13_000);
+  assert.equal(Math.round(r.sold), 13_000);
 });

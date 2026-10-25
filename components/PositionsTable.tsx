@@ -35,7 +35,8 @@ export function PositionsTable({ positions, cash, prices, fx }: { positions: Pos
                 <div className="muted" style={{ fontSize: 12 }}>{p.name}</div>
               </td>
               <td>
-                <span className="tag">{KIND_LABEL[p.kind]}{p.kind === "etp" ? ` ${p.leverage}x` : ""}</span>
+                <span className="tag">{KIND_LABEL[p.kind]}{p.kind === "etp" || (p.debt ?? 0) > 0 ? ` ${p.leverage}x` : ""}</span>
+                {(p.debt ?? 0) > 0 && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>prestito {eur(p.debt ?? 0)}</div>}
                 {p.kind === "future" && <div className={`num ${p.qty >= 0 ? "up" : "down"}`} style={{ fontSize: 12, marginTop: 4 }}>{p.qty >= 0 ? "Long" : "Short"} {eur(Math.abs(exposure ?? 0))}</div>}
               </td>
               <td className="r num">{p.qty.toLocaleString("it-IT", { maximumFractionDigits: 4 })}</td>

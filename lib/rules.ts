@@ -20,8 +20,9 @@ export type Position = {
   currency: string; // valuta del prezzo, già normalizzata (GBp -> GBP)
   qty: number; // quote, contratti di opzione, o unità di future (con segno)
   multiplier: number; // 100 per le opzioni USA, 1 altrimenti
-  leverage: number; // solo prodotti a leva, con segno per gli inversi
+  leverage: number; // ETP: leva del prodotto (con segno); azioni ed ETF: leva scelta per l'acquisto (1-5)
   margin: number; // solo futures: margine bloccato in euro
+  debt?: number; // acquisti a leva: prestito in euro (esposizione meno capitale proprio)
   refPrice: number | null; // solo futures: prezzo dell'ultimo regolamento
   expiry: string | null; // solo opzioni
   underlying: string | null;
@@ -37,6 +38,9 @@ export const MAX_LEVERAGE = 5;
 export const MAX_SALE_SHARE = 0.5;
 export const MIN_TYPE_WEIGHT = 0.05;
 export const MANDATORY: Kind[] = ["stock", "etf_equity", "etf_bond"];
+/** Strumenti che si possono comprare a leva (il resto della leva è nei futures e negli ETP). */
+export const MARGIN_KINDS: Kind[] = ["stock", "etf_equity", "etf_bond", "etf_other"];
+export const levOf = (p: Position) => (MARGIN_KINDS.includes(p.kind) ? p.leverage || 1 : 1);
 const EPS = 0.01;
 
 export function fxRate(fx: Fx, ccy: string) {
@@ -57,11 +61,12 @@ export function notional(pos: Position, price: number, fx: Fx) {
   return (pos.qty * pos.multiplier * price) / fxRate(fx, pos.currency);
 }
 
-/** Quanto vale la posizione nel portafoglio. Un future vale il suo margine;
+/** Quanto vale la posizione nel portafoglio. Comprata a leva: esposizione meno prestito.
+ *  Un future vale il suo margine;
  *  con live=true si aggiunge il guadagno/perdita maturato dall'ultimo venerdì. */
 export function positionValue(pos: Position, prices: Prices, fx: Fx, live = false) {
   const price = priceOf(prices, pos.symbol);
-  if (pos.kind !== "future") return notional(pos, price, fx);
+  if (pos.kind !== "future") return notional(pos, price, fx) - (pos.debt ?? 0);
   if (!live || pos.refPrice === null) return pos.margin;
   return pos.margin + (pos.qty * pos.multiplier * (price - pos.refPrice)) / fxRate(fx, pos.currency);
 }
@@ -129,12 +134,23 @@ export function applyLineup(
     }
 
     const oldQty = old?.qty ?? 0;
-    const dq = t.qty - oldQty;
-    if (Math.abs(dq) > 1e-9) changed = true;
+    const oldDebt = old?.debt ?? 0;
+    const lev = levOf(t);
+    const same = old && Math.abs(t.qty - oldQty) <= 1e-9 && Math.abs(levOf(old) - lev) <= 1e-9;
+    if (same) {
+      out.push({ ...t, leverage: old.leverage, margin: 0, refPrice: null, debt: oldDebt });
+      continue;
+    }
+    changed = true;
+    // Comprare a leva L: metti 1/L di capitale tuo, il resto è prestito (senza interessi).
+    // Se cambi quantità o leva, il prestito si ricalcola su tutta la posizione.
     const unit = (t.multiplier * price) / fxRate(fx, t.currency);
-    if (dq < 0) sold += -dq * unit;
-    cash -= dq * unit;
-    if (t.qty > 1e-9) out.push({ ...t, margin: 0, refPrice: null });
+    const debt = Math.max(0, t.qty) * unit * (1 - 1 / lev);
+    const oldNet = oldQty * unit - oldDebt;
+    const newNet = t.qty * unit - debt;
+    if (newNet < oldNet) sold += oldNet - newNet;
+    cash -= newNet - oldNet;
+    if (t.qty > 1e-9) out.push({ ...t, margin: 0, refPrice: null, debt });
   }
 
   // Posizioni attive non più presenti nella formazione: vendute per intero.
@@ -145,7 +161,7 @@ export function applyLineup(
       cash += old.margin;
       sold += old.margin;
     } else {
-      const v = notional(old, priceOf(prices, old.symbol), fx);
+      const v = positionValue(old, prices, fx);
       cash += v;
       sold += v;
     }
@@ -209,6 +225,9 @@ export function checkInstrument(t: Position): string[] {
   if (t.kind === "etp" && (Math.abs(t.leverage) > MAX_LEVERAGE || t.leverage === 0)) {
     e.push(`${t.symbol}: leva massima ${MAX_LEVERAGE}x`);
   }
+  if (MARGIN_KINDS.includes(t.kind) && !(t.leverage >= 1 && t.leverage <= MAX_LEVERAGE)) {
+    e.push(`${t.symbol}: la leva va da 1x a ${MAX_LEVERAGE}x`);
+  }
   if (/bitcoin|ethereum|crypto|\bbtc\b|\beth\b|solana|ripple|\bxrp\b/i.test(`${t.symbol} ${t.name}`)) {
     e.push(`${t.symbol}: niente crypto`);
   }
@@ -269,7 +288,7 @@ export function forcedSale(positions: Position[], cash: number, prices: Prices, 
     .map((p) => {
       const v = positionValue(p, prices, fx);
       ledger.push({ symbol: p.symbol, kind: "forced_sale", amount: v * f, note: `vendita forzata ${pct(f)}` });
-      return { ...p, qty: p.qty * (1 - f), margin: p.margin * (1 - f) };
+      return { ...p, qty: p.qty * (1 - f), margin: p.margin * (1 - f), debt: (p.debt ?? 0) * (1 - f) };
     })
     .filter((p) => Math.abs(p.qty) > 1e-12);
   return { positions: out, cash: cash + invested * f, ledger };
