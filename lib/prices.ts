@@ -37,7 +37,14 @@ export async function quotes(symbols: string[]): Promise<Quote[]> {
   const uniq = [...new Set(symbols.filter(Boolean))];
   if (!uniq.length) return [];
   return cached(`q:${uniq.sort().join(",")}`, 60_000, async () => {
-    const res = await yf.quote(uniq, { return: "array" }, { validateResult: false });
+    let res: unknown;
+    try {
+      res = await yf.quote(uniq, { return: "array" }, { validateResult: false });
+    } catch (err) {
+      // Yahoo a volte rifiuta il "crumb" dai server cloud: si ripiega sul grafico, che non lo chiede.
+      console.error("quote, uso chart", err);
+      return chartQuotes(uniq);
+    }
     return (res as Record<string, any>[]).map((q) => {
       const n = normalize(q.regularMarketPrice ?? 0, q.currency ?? "USD");
       return {
@@ -51,6 +58,29 @@ export async function quotes(symbols: string[]): Promise<Quote[]> {
       };
     });
   });
+}
+
+async function chartQuotes(symbols: string[]): Promise<Quote[]> {
+  const out: Quote[] = [];
+  await Promise.all(symbols.map(async (symbol) => {
+    try {
+      const r = await yf.chart(symbol, { period1: new Date(Date.now() - 5 * 86400_000), interval: "1d" }, { validateResult: false }) as any;
+      const m = r.meta ?? {};
+      const n = normalize(m.regularMarketPrice ?? 0, m.currency ?? "USD");
+      const closes = (r.quotes ?? []).map((q: any) => q.close).filter((c: any) => typeof c === "number");
+      const prev = closes.length >= 2 ? closes[closes.length - 2] : m.previousClose;
+      out.push({
+        symbol,
+        name: m.shortName ?? m.longName ?? symbol,
+        price: n.price,
+        changePct: prev ? ((m.regularMarketPrice - prev) / prev) * 100 : null,
+        currency: n.currency,
+        quoteType: m.instrumentType ?? "",
+        marketState: null,
+      });
+    } catch {}
+  }));
+  return out;
 }
 
 /** Ultima chiusura ufficiale disponibile fino a `date` compreso. */
