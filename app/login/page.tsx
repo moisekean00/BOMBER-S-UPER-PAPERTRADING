@@ -20,24 +20,28 @@ function LoginForm() {
     setBusy(true);
     setError(null);
     const supabase = browserClient();
-    const res =
-      mode === "login"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password, options: { data: { trader_name: trader.trim() } } });
+    if (mode === "signup") {
+      const r = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password, trader_name: trader.trim() }),
+      }).catch(() => null);
+      const body = r ? await r.json().catch(() => ({})) : {};
+      if (!r?.ok) {
+        setBusy(false);
+        setError(body.error ?? "Iscrizione non riuscita, riprova");
+        return;
+      }
+    }
+    const res = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (res.error) {
       const m = res.error.message;
       setError(
         /invalid login/i.test(m) ? "Email o password sbagliate"
-        : /already registered/i.test(m) ? "Questa email è già iscritta: accedi"
-        : /database error/i.test(m) ? "Questo nome da trader è già preso, scegline un altro"
-        : /password/i.test(m) ? "La password deve avere almeno 6 caratteri"
+        : /not confirmed/i.test(m) ? "Iscrizione rimasta a metà: clicca Iscriviti e rifalla con la stessa email"
         : m,
       );
-      return;
-    }
-    if (mode === "signup" && !res.data.session) {
-      setError("Iscrizione fatta. Controlla l'email per confermare, poi accedi.");
       return;
     }
     router.push("/dashboard");
