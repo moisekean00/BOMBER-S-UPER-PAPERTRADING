@@ -10,3 +10,6 @@ export const cls = (n: number | null | undefined) => (n === null || n === undefi
 
 export const shortDate = (d: string | null) =>
   d ? new Date(`${d}T12:00:00Z`).toLocaleDateString("it-IT", { day: "numeric", month: "short" }) : "";
+
+export const initials = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";

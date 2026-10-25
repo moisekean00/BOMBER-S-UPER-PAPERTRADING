@@ -136,7 +136,7 @@ export function LineupEditor() {
     <div className="card">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
-          <h2 style={{ margin: 0 }}>Formazione · {ctx.window.label}</h2>
+          <h2 style={{ margin: 0 }}>La tua formazione</h2>
           <div className="muted" style={{ fontSize: 13 }}>Prezzi di chiusura di {priceDay}. Puoi cambiarla fino alla scadenza: vale l&apos;ultima versione salvata.</div>
         </div>
         <span className="tag">{ctx.draft ? "Bozza salvata" : "Nessun cambio salvato"}</span>
@@ -148,12 +148,12 @@ export function LineupEditor() {
 
       {r && (
         <div className="grid-3" style={{ marginTop: 16 }}>
-          <div className="stat">
+          <div className="stat flat">
             <div className="label">Cash dopo i cambi</div>
             <div className={`value num ${r.cash < 0 ? "down" : ""}`}>{eur(r.cash)}</div>
             <div className="muted" style={{ fontSize: 13 }}>Totale {eur(r.total)}</div>
           </div>
-          <div className="stat">
+          <div className="stat flat">
             <div className="label">Vendite / limite 50%</div>
             <div className="value num" style={{ fontSize: "1.2rem" }}>
               {eur(r.sold)} <span className="muted">/ {isFinite(r.saleLimit) ? eur(r.saleLimit) : "libero"}</span>
@@ -164,7 +164,7 @@ export function LineupEditor() {
               </div>
             )}
           </div>
-          <div className="stat">
+          <div className="stat flat">
             <div className="label">Minimi obbligatori 5%</div>
             {MANDATORY.map((k) => {
               const w = r.weights[k] ?? 0;
@@ -193,7 +193,7 @@ export function LineupEditor() {
           </thead>
           <tbody>
             {target.length === 0 && (
-              <tr><td colSpan={6} className="muted">Ancora niente. Cerca un titolo qui sotto e aggiungilo.</td></tr>
+              <tr><td colSpan={6} className="muted">Rosa vuota. Cerca un titolo qui sotto e compralo.</td></tr>
             )}
             {target.map((p) => (
               <EditRow key={p.symbol} p={p} prices={prices} fx={fx} margin={r?.positions.find((x) => x.symbol === p.symbol)?.margin ?? 0} onChange={(patch) => update(p.symbol, patch)} onRemove={() => remove(p.symbol)} />
@@ -336,16 +336,18 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
   }
 
   return (
-    <div className="card" style={{ marginTop: 16, background: "var(--card-2)", boxShadow: "none" }}>
+    <div style={{ marginTop: 20, background: "var(--bg)", borderRadius: 18, padding: 18 }}>
       <div className="row" style={{ marginBottom: 12 }}>
-        <h3 style={{ margin: 0, marginRight: 8 }}>Aggiungi</h3>
-        <button className={`btn small ${tab === "search" ? "" : "ghost"}`} onClick={() => { setTab("search"); setPicked(null); }}>Azioni, ETF, futures</button>
-        <button className={`btn small ${tab === "options" ? "" : "ghost"}`} onClick={() => { setTab("options"); setPicked(null); setHits([]); }}>Opzioni</button>
+        <h3 style={{ margin: 0, marginRight: 8 }}>Compra</h3>
+        <div className="seg" style={{ background: "#fff" }}>
+          <button className={tab === "search" ? "on" : ""} style={tab === "search" ? { background: "var(--navy)", color: "#fff" } : undefined} onClick={() => { setTab("search"); setPicked(null); }}>Azioni, ETF, futures</button>
+          <button className={tab === "options" ? "on" : ""} style={tab === "options" ? { background: "var(--navy)", color: "#fff" } : undefined} onClick={() => { setTab("options"); setPicked(null); setHits([]); }}>Opzioni</button>
+        </div>
       </div>
 
       {!picked && (
         <div className="row">
-          <input className="grow" value={q} onChange={(e) => { setQ(e.target.value); setChain(null); }} placeholder={tab === "search" ? "Cerca: Ferrari, VWCE, ES=F, AGGH…" : "Sottostante USA: AAPL, SPY, QQQ…"} />
+          <input className="grow" style={{ background: "#fff" }} value={q} onChange={(e) => { setQ(e.target.value); setChain(null); }} placeholder={tab === "search" ? "Cerca: Ferrari, VWCE, ES=F, AGGH…" : "Sottostante USA: AAPL, SPY, QQQ…"} />
           {tab === "options" && <button className="btn" onClick={() => loadChain()} disabled={busy || !q.trim()}>Carica catena</button>}
         </div>
       )}
@@ -372,8 +374,10 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
               <option value="" disabled>Scadenza…</option>
               {chain.expirations.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
-            <button className={`btn small ${side === "C" ? "" : "ghost"}`} onClick={() => setSide("C")}>Call</button>
-            <button className={`btn small ${side === "P" ? "" : "ghost"}`} onClick={() => setSide("P")}>Put</button>
+            <div className="seg" style={{ background: "#fff" }}>
+              <button className={side === "C" ? "on" : ""} onClick={() => setSide("C")}>Call</button>
+              <button className={side === "P" ? "on" : ""} onClick={() => setSide("P")}>Put</button>
+            </div>
             <span className="muted" style={{ fontSize: 13 }}>{chain.underlying} a {chain.underlyingPrice}</span>
           </div>
           <div className="results">
@@ -430,7 +434,7 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
           </div>
           {kind === "future" && <div className="muted" style={{ fontSize: 13 }}>Si blocca il 20% dell&apos;esposizione come margine. Per andare short cambia Long/Short nella tabella dopo averlo aggiunto.</div>}
           <div className="row">
-            <button className="btn" onClick={confirm}>Aggiungi alla formazione</button>
+            <button className="btn" onClick={confirm}>Compra</button>
             <button className="btn ghost" onClick={() => setPicked(null)}>Annulla</button>
           </div>
         </div>

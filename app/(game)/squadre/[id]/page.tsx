@@ -4,7 +4,7 @@ import { adminClient } from "@/lib/supabase/server";
 import { toPosition, toProfile } from "@/lib/db";
 import { livePrices } from "@/lib/live";
 import { PositionsTable } from "@/components/PositionsTable";
-import { eur, shortDate } from "@/components/format";
+import { eur, shortDate, initials } from "@/components/format";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +21,12 @@ export default async function TraderPage({ params }: { params: { id: string } })
   const { prices, fx } = await livePrices(positions);
   return (
     <div className="stack">
-      <Link href="/lega" className="muted">← La lega</Link>
+      <Link href="/squadre" className="muted">← Squadre</Link>
       <div className="card">
-        <h2>{profile.trader_name}</h2>
+        <div className="team-head" style={{ marginBottom: 16 }}>
+          <span className="avatar" style={{ width: 52, height: 52, borderRadius: 16, fontSize: 18 }}>{initials(profile.trader_name)}</span>
+          <h1 style={{ margin: 0, fontSize: "1.7rem" }}>{profile.trader_name}</h1>
+        </div>
         {profile.eliminated_on && <div className="notice err">Eliminato il {shortDate(profile.eliminated_on)}</div>}
         <PositionsTable positions={positions} cash={profile.cash} prices={prices} fx={fx} />
       </div>

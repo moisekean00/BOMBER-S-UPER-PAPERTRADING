@@ -6,33 +6,82 @@ import { currentUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const DEMO = [
+  { r: 1, n: "Lupo di Piazza Affari", v: "112.480 €", c: "+12,5%" },
+  { r: 2, n: "Il Bomber del Nasdaq", v: "108.930 €", c: "+8,9%" },
+  { r: 3, n: "Mister Contango", v: "104.210 €", c: "+4,2%" },
+  { r: 4, n: "Short Panchina", v: "97.650 €", c: "−2,4%" },
+];
+
 export default async function Landing() {
   const user = await currentUser().catch(() => null);
   return (
-    <main className="landing">
-      <div>
-        <Logo size={88} big />
-        <p className="tagline">{TAGLINE}</p>
-        <div className="row" style={{ justifyContent: "center" }}>
-          {user ? (
-            <Link className="btn" href="/dashboard">Entra nella lega</Link>
-          ) : (
-            <>
-              <Link className="btn" href="/login?mode=signup">Iscriviti</Link>
-              <Link className="btn ghost" href="/login">Accedi</Link>
-            </>
-          )}
-          <Link className="btn ghost" href="/regolamento">Regolamento</Link>
+    <main>
+      <section className="lp-hero">
+        <div className="lp-nav">
+          <Logo size={36} light />
+          <div className="row">
+            {user ? (
+              <Link className="btn white small" href="/dashboard">Entra</Link>
+            ) : (
+              <Link className="btn white small" href="/login">Accedi</Link>
+            )}
+          </div>
         </div>
-        <div className="card hero" style={{ maxWidth: 520, margin: "36px auto 0", textAlign: "left" }}>
+        <div className="lp-hero-inner">
+          <div>
+            <h1>Il calciomercato,<br />ma con la <span>Borsa</span>.</h1>
+            <p>{TAGLINE}</p>
+            <div className="row">
+              <Link className="btn white" href={user ? "/dashboard" : "/login?mode=signup"}>{user ? "Vai alla lega" : "Crea la tua squadra"}</Link>
+              <Link className="btn ghost" href="/regolamento" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.25)" }}>Regolamento</Link>
+            </div>
+          </div>
+          <div className="phone">
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Classifica · esempio</div>
+            {DEMO.map((d) => (
+              <div key={d.r} className="roster-row">
+                <div className="row" style={{ flexWrap: "nowrap" }}>
+                  <span className={`rank ${d.r <= 3 ? `g${d.r}` : ""}`}>{d.r}</span>
+                  <span style={{ fontWeight: 600 }}>{d.n}</span>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div className="num" style={{ fontWeight: 600 }}>{d.v}</div>
+                  <div className={`num ${d.c.startsWith("+") ? "up" : "down"}`} style={{ fontSize: 12, fontWeight: 600 }}>{d.c}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="lp-section">
+        <h2>Come funziona</h2>
+        <p className="lp-sub">Tre regole, una stagione da novembre a fine anno.</p>
+        <div className="steps">
+          <div className="step"><div className="n">1</div><h3>Ricevi 100.000 €</h3><p className="muted">Virtuali. Costruisci la squadra con azioni, ETF, futures e opzioni di tutti i mercati.</p></div>
+          <div className="step"><div className="n">2</div><h3>Schiera nel weekend</h3><p className="muted">Il mercato apre il sabato e chiude la domenica alle 23:59. Si compra ai prezzi di chiusura del venerdì.</p></div>
+          <div className="step"><div className="n">3</div><h3>Scala la classifica</h3><p className="muted">Ogni venerdì si aggiornano i valori. Al 31 dicembre vince il portafoglio più alto.</p></div>
+        </div>
+      </section>
+
+      <section className="lp-band">
+        <div className="lp-section">
+          <h2>Tutti i mercati, una sola lega</h2>
+          <p className="lp-sub">Leva fino a 5x, futures long e short, opzioni in acquisto. Niente crypto.</p>
+          <div className="pills">
+            {["Azioni", "ETF azionari", "ETF obbligazionari", "ETC e materie prime", "Prodotti a leva", "Futures", "Opzioni"].map((p) => <span key={p}>{p}</span>)}
+          </div>
+        </div>
+      </section>
+
+      <section className="lp-section">
+        <div className="card hero" style={{ maxWidth: 620, margin: "0 auto" }}>
           <Countdown />
         </div>
-        <div className="features">
-          <div className="card"><h3>100.000 € virtuali</h3><p className="muted">Azioni, ETF, futures e opzioni di tutti i mercati. Leva fino a 5x.</p></div>
-          <div className="card"><h3>Mercato nel weekend</h3><p className="muted">Cambi dal sabato alla domenica alle 23:59, ai prezzi di chiusura del venerdì.</p></div>
-          <div className="card"><h3>Classifica ogni venerdì</h3><p className="muted">Vince chi ha il portafoglio più alto al 31 dicembre.</p></div>
-        </div>
-      </div>
+      </section>
+
+      <footer className="lp-foot">Super Bomber Paper Trader · soldi virtuali, sfottò veri.</footer>
     </main>
   );
 }

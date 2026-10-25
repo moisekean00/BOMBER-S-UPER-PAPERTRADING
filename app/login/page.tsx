@@ -49,18 +49,18 @@ function LoginForm() {
   }
 
   return (
-    <main className="landing">
+    <main className="lp-hero" style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
-        <Link href="/" style={{ textDecoration: "none" }}><Logo size={56} big /></Link>
-        <form className="card" onSubmit={submit} style={{ marginTop: 28, textAlign: "left" }}>
-          <div className="row" style={{ marginBottom: 16 }}>
-            <button type="button" className={`btn small ${mode === "login" ? "" : "ghost"}`} onClick={() => setMode("login")}>Accedi</button>
-            <button type="button" className={`btn small ${mode === "signup" ? "" : "ghost"}`} onClick={() => setMode("signup")}>Iscriviti</button>
+        <div style={{ textAlign: "center" }}><Link href="/"><Logo size={44} light /></Link></div>
+        <form className="card" onSubmit={submit} style={{ marginTop: 28, color: "var(--text)" }}>
+          <div className="seg" style={{ marginBottom: 20, width: "100%" }}>
+            <button type="button" style={{ flex: 1 }} className={mode === "login" ? "on" : ""} onClick={() => setMode("login")}>Accedi</button>
+            <button type="button" style={{ flex: 1 }} className={mode === "signup" ? "on" : ""} onClick={() => setMode("signup")}>Iscriviti</button>
           </div>
           {mode === "signup" && (
             <div className="field">
               <label htmlFor="trader">Nome da trader</label>
-              <input id="trader" required minLength={2} maxLength={24} value={trader} onChange={(e) => setTrader(e.target.value)} placeholder="es. Lupo di Piazza Affari" />
+              <input id="trader" required minLength={2} maxLength={24} value={trader} onChange={(e) => setTrader(e.target.value)} placeholder="es. Il Bomber del Nasdaq" />
             </div>
           )}
           <div className="field">

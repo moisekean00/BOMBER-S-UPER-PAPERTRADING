@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
-import { Archivo, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { BRAND, TAGLINE } from "@/lib/brand";
+import { BRAND_FULL, TAGLINE } from "@/lib/brand";
 
-const display = Archivo({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata: Metadata = {
-  title: BRAND,
+  title: BRAND_FULL,
   description: TAGLINE,
   icons: { icon: "/logo.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" className={`${display.variable} ${body.variable}`}>
+    <html lang="it" className={body.variable}>
       <body>{children}</body>
     </html>
   );

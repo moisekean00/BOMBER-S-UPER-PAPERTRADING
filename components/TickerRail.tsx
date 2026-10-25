@@ -24,11 +24,11 @@ function Row({ q, label }: { q?: Q; label: string }) {
         <div className="sym">{label}</div>
         {q && q.name !== label && <div className="nm">{q.symbol}</div>}
       </div>
-      <div style={{ textAlign: "right" }} className="num">
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="num">
         <div>{q ? q.price.toLocaleString("it-IT", { maximumFractionDigits: q.price < 10 ? 4 : 2 }) : "…"}</div>
-        <div className={ch === null ? "muted" : ch >= 0 ? "up" : "down"} style={{ fontSize: 12, fontWeight: 700 }}>
-          {ch === null ? "" : `${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%`}
-        </div>
+        <span className={`chg ${ch === null ? "flat" : ch >= 0 ? "up" : "down"}`}>
+          {ch === null ? "—" : `${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%`}
+        </span>
       </div>
     </div>
   );
@@ -57,9 +57,9 @@ export function TickerRail({ mine = [] }: { mine?: { symbol: string; name: strin
   return (
     <aside className="rail stack">
       <div className="card">
-        <div className="row" style={{ justifyContent: "space-between" }}>
+        <div className="section-head" style={{ marginBottom: 4 }}>
           <h3 style={{ margin: 0 }}>Mercati</h3>
-          <span className="muted" style={{ fontSize: 12 }}>{at ? `agg. ${at} · ritardo ~15'` : ""}</span>
+          <span className="muted" style={{ fontSize: 12 }}>{at ? `${at} · ritardo ~15'` : ""}</span>
         </div>
         {MARKETS.map(([s, label]) => <Row key={s} q={data[s]} label={label} />)}
       </div>

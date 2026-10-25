@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Standing } from "@/lib/standings";
 import { START_CAPITAL } from "@/lib/calendar";
-import { eur, pctChange, cls, shortDate } from "./format";
+import { eur, pctChange, cls, shortDate, initials } from "./format";
 
 export function Leaderboard({ list, me }: { list: Standing[]; me?: string }) {
   const date = list.find((s) => s.officialDate)?.officialDate ?? null;
@@ -24,8 +24,11 @@ export function Leaderboard({ list, me }: { list: Standing[]; me?: string }) {
               <tr key={s.profile.id} style={s.profile.id === me ? { background: "rgba(25,195,125,0.06)" } : undefined}>
                 <td><span className={`rank ${s.rank <= 3 && !s.profile.eliminated_on ? `g${s.rank}` : ""}`}>{s.rank}</span></td>
                 <td>
-                  <Link href={`/lega/${s.profile.id}`} style={{ color: "var(--text)", fontWeight: 700 }}>{s.profile.trader_name}</Link>
-                  {s.profile.eliminated_on && <span className="tag" style={{ marginLeft: 8 }}>eliminato</span>}
+                  <Link href={`/squadre/${s.profile.id}`} className="row" style={{ color: "var(--text)", fontWeight: 600, flexWrap: "nowrap" }}>
+                    <span className="avatar" style={{ width: 32, height: 32, borderRadius: 10, fontSize: 13 }}>{initials(s.profile.trader_name)}</span>
+                    {s.profile.trader_name}
+                    {s.profile.eliminated_on && <span className="tag">eliminato</span>}
+                  </Link>
                 </td>
                 <td className="r num">{eur(s.official)}</td>
                 <td className={`r num ${cls(ret)}`}>{pctChange(ret)}</td>

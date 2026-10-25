@@ -9,11 +9,11 @@ export default function Rules() {
   return (
     <>
       <header className="topbar">
-        <Link href="/dashboard" style={{ textDecoration: "none" }}><Logo size={34} /></Link>
+        <Link href="/dashboard"><Logo size={32} light /></Link>
         <div className="spacer" />
-        <Link className="btn ghost small" href="/dashboard">Torna alla lega</Link>
+        <Link className="btn white small" href="/dashboard">Torna alla lega</Link>
       </header>
-      <main className="prose" style={{ maxWidth: 820, margin: "0 auto", padding: "24px 16px 60px" }}>
+      <main className="prose" style={{ maxWidth: 780, margin: "0 auto", padding: "40px 20px 80px" }}>
         <h1>Regolamento</h1>
 
         <h2>1. Il torneo in breve</h2>
@@ -54,7 +54,7 @@ export default function Rules() {
             </tbody>
           </table>
         </div>
-        <p>Il mercato di prova serve solo per fare pratica: a mezzanotte di venerdì 30 ottobre tutti ripartono da 100.000 € in cash.</p>
+        <p style={{ marginTop: 16 }}>Il mercato di prova serve solo per fare pratica: a mezzanotte di venerdì 30 ottobre tutti ripartono da 100.000 € in cash.</p>
 
         <h2>4. Prodotti ammessi e composizione</h2>
         <p>Si possono usare tutti i mercati del mondo. Ogni portafoglio deve avere almeno il <b>5% in azioni</b>, il <b>5% in ETF azionari</b> e il <b>5% in ETF obbligazionari</b>. Il controllo si fa su ogni formazione inviata, ai prezzi del venerdì: se un tipo scende sotto il 5% per l&apos;andamento dei prezzi non c&apos;è penalità, ma alla prima finestra in cui fai cambi va riportato al 5%.</p>

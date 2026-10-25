@@ -16,17 +16,11 @@ export default async function Dashboard() {
   return (
     <div className="stack">
       <div className="card hero">
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-          <Countdown />
-          {w && (
-            <Link className="btn" href="/portfolio" style={{ position: "relative", zIndex: 1 }}>
-              {w.demo ? "Prova a schierare" : "Schiera la formazione"}
-            </Link>
-          )}
-        </div>
-        {w?.demo && (
-          <div className="notice info" style={{ marginTop: 14, position: "relative", zIndex: 1 }}>
-            Mercato di prova: usa le chiusure del 23 ottobre per fare pratica. Venerdì 30 alle 18:00 si chiude e a mezzanotte tutti ripartono da 100.000 €.
+        <Countdown />
+        {w && (
+          <div className="row" style={{ marginTop: 18, position: "relative" }}>
+            <Link className="btn white" href="/mercato">{w.demo ? "Prova il mercato" : "Vai al mercato"}</Link>
+            {w.demo && <span className="muted" style={{ fontSize: 13 }}>Prova con le chiusure del 23 ottobre. Venerdì 30 a mezzanotte tutti ripartono da 100.000 €.</span>}
           </div>
         )}
       </div>
@@ -35,12 +29,12 @@ export default async function Dashboard() {
         <div className="grid-3">
           <div className="stat">
             <div className="label">Posizione</div>
-            <div className="value">{me.rank}° <span className="muted" style={{ fontSize: 14 }}>su {list.length}</span></div>
+            <div className="value">{me.rank}° <span className="muted" style={{ fontSize: 14, fontWeight: 500 }}>su {list.length}</span></div>
           </div>
           <div className="stat">
             <div className="label">Valore ufficiale</div>
             <div className="value num">{eur(me.official)}</div>
-            <div className={cls(me.official - START_CAPITAL)}>{pctChange(me.official / START_CAPITAL - 1)}</div>
+            <div className={cls(me.official - START_CAPITAL)} style={{ fontWeight: 600, fontSize: 14 }}>{pctChange(me.official / START_CAPITAL - 1)}</div>
           </div>
           <div className="stat">
             <div className="label">Stima live</div>
@@ -51,9 +45,9 @@ export default async function Dashboard() {
       )}
 
       <div className="card">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <h2 style={{ margin: 0 }}>Classifica</h2>
-          <span className="muted" style={{ fontSize: 13 }}>Ufficiale ai prezzi del venerdì · live con ~15&apos; di ritardo</span>
+        <div className="section-head">
+          <h2>Classifica</h2>
+          <span className="muted" style={{ fontSize: 13 }}>Ufficiale al venerdì · live con ~15&apos; di ritardo</span>
         </div>
         <Leaderboard list={list} me={user?.id} />
       </div>
