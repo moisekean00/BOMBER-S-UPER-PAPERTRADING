@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test --experimental-strip-types lib/rules.test.ts lib/metrics.test.ts"
+    "test": "node --test --experimental-strip-types lib/rules.test.ts lib/metrics.test.ts lib/stats.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

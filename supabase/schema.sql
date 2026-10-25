@@ -33,6 +33,29 @@ create table if not exists positions (
 -- Acquisti a leva su azioni ed ETF (aggiunto il 25/10).
 alter table positions add column if not exists debt numeric not null default 0;
 
+-- Storico delle operazioni eseguite alla chiusura di ogni finestra (aggiunto il 25/10).
+create table if not exists trades (
+  id bigserial primary key,
+  user_id uuid not null references profiles on delete cascade,
+  window_id int not null,
+  date date not null,
+  symbol text not null,
+  name text not null,
+  kind text not null,
+  side text not null,
+  qty_before numeric not null,
+  qty_after numeric not null,
+  price numeric,
+  currency text not null,
+  amount numeric not null,
+  exposure numeric not null,
+  leverage numeric not null default 1,
+  created_at timestamptz not null default now()
+);
+alter table trades enable row level security;
+drop policy if exists "read trades" on trades;
+create policy "read trades" on trades for select to authenticated using (true);
+
 -- Formazione inviata in una finestra: privata fino alla chiusura.
 create table if not exists lineups (
   user_id uuid not null references profiles on delete cascade,

@@ -4,7 +4,8 @@
 // Le trimestrali arrivano da Yahoo (lib/earnings.ts) perché cambiano spesso.
 
 export type EventKind = "banche" | "macro" | "trimestrali" | "elezioni" | "mercati";
-export type Area = "USA" | "Europa" | "Italia" | "Asia" | "Mondo";
+import type { Area } from "./area";
+export type { Area };
 export const AREAS: Area[] = ["Italia", "Europa", "USA", "Asia", "Mondo"];
 export type MarketEvent = { date: string; time?: string; kind: EventKind; area: Area; title: string; note?: string; symbol?: string };
 

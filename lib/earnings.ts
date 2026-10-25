@@ -1,6 +1,7 @@
 import "server-only";
 import YahooFinance from "yahoo-finance2";
-import type { Area, MarketEvent } from "./events";
+import type { MarketEvent } from "./events";
+import { areaOf } from "./area";
 
 const yf = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -15,14 +16,6 @@ export const WATCHLIST = [
   // Asia
   "2330.TW", "BABA", "JD", "PDD", "BIDU", "0700.HK", "7203.T", "6758.T", "9984.T", "005930.KS", "1810.HK",
 ];
-
-const ADR_ASIA = ["BABA", "JD", "PDD", "BIDU", "TSM", "NIO"];
-function areaOf(symbol: string): Area {
-  if (symbol.endsWith(".MI")) return "Italia";
-  if (/\.(DE|PA|AS|L|SW|CO|MC|BR|ST|HE|OL|VI|LS|IR)$/.test(symbol)) return "Europa";
-  if (/\.(T|HK|TW|TWO|KS|KQ|SS|SZ|AX|NS|BO|SI)$/.test(symbol) || ADR_ASIA.includes(symbol)) return "Asia";
-  return "USA";
-}
 
 let cache: { at: number; key: string; events: MarketEvent[] } | null = null;
 

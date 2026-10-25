@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WINDOWS, VALUATION_DATES, valuationTime, START_CAPITAL, type Window } from "./calendar";
 import { adminClient } from "./supabase/server";
+import { diffOrders } from "./orders";
 import { pool, pricesFor, toPosition, toRow } from "./db";
 import { dividendsBetween } from "./prices";
 import { applyLineup, settle, forcedSale, valuePortfolio, type Position, type LedgerEntry } from "./rules";
@@ -135,6 +136,14 @@ async function commitWindow(db: SupabaseClient, w: Window) {
       try { r = applyLineup(active, Number(p.cash), target, prices, fx, { first: w.first }); } catch (e) { console.error("commit", p.id, e); }
       if (r && !r.errors.length && !r.warnings.length) {
         await savePortfolio(db, p.id, r.positions, r.cash);
+        const orders = diffOrders(active, r.positions, prices, fx);
+        if (orders.length) {
+          const ins = await db.from("trades").insert(orders.map((o) => ({
+            user_id: p.id, window_id: w.id, date: w.priceDate, symbol: o.symbol, name: o.name, kind: o.kind, side: o.side,
+            qty_before: o.qtyBefore, qty_after: o.qtyAfter, price: o.price, currency: o.currency, amount: o.amount, exposure: o.exposure, leverage: o.leverage,
+          })));
+          if (ins.error) console.error("storico operazioni", ins.error);
+        }
         continue;
       }
       console.error("book non valido alla chiusura", p.id, r?.errors, r?.warnings);
