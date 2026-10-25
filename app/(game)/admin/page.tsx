@@ -4,11 +4,9 @@ import { adminClient, currentUser } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/game";
 import { standingsWithMarket } from "@/lib/standings";
 import { currentWindow, START_CAPITAL } from "@/lib/calendar";
-import { liveFx, quotes } from "@/lib/prices";
 import { PaidToggle } from "@/components/PaidToggle";
 import { PositionsTable } from "@/components/PositionsTable";
 import { eur, pctChange, cls } from "@/components/format";
-import type { Position } from "@/lib/rules";
 
 export const dynamic = "force-dynamic";
 
@@ -31,21 +29,14 @@ export default async function AdminPage() {
   const names = new Map(list.map((s) => [s.profile.id, s.profile.trader_name]));
   const paid = list.filter((s) => s.profile.paid).length;
   const prices: Record<string, number> = { ...market.ref, ...market.live };
-  const fx = { ...market.fx };
-  // Prezzi live anche dei titoli che compaiono solo negli ordini segreti.
-  const draftPos = (lineups ?? []).flatMap((l: any) => l.positions as Position[]);
-  const missing = [...new Set(draftPos.map((p) => p.symbol))].filter((sym) => prices[sym] === undefined);
-  try {
-    for (const q of await quotes(missing)) prices[q.symbol] = q.price;
-    Object.assign(fx, await liveFx(draftPos.map((p) => p.currency).filter((c) => !(c in fx))));
-  } catch {}
+  const fx = market.fx;
 
   return (
     <div className="stack">
       <div>
         <div className="eyebrow">Admin view</div>
         <h1 style={{ margin: 0, fontSize: "1.8rem" }}>Sala di controllo</h1>
-        <p className="muted" style={{ margin: "6px 0 0" }}>Vedi tutto, anche gli ordini segreti della finestra in corso. Gli altri trader non vedono questa pagina.</p>
+        <p className="muted" style={{ margin: "6px 0 0" }}>Vedi tutto tranne il contenuto degli ordini della finestra in corso: restano segreti anche per l&apos;admin fino alla chiusura, perché anche tu giochi.</p>
       </div>
 
       <div className="grid-3">
@@ -84,22 +75,17 @@ export default async function AdminPage() {
         const d = drafts.get(s.profile.id);
         return (
           <details key={s.profile.id} className="card">
-            <summary style={{ cursor: "pointer", fontWeight: 700 }}>{s.profile.trader_name} · book e ordini</summary>
+            <summary style={{ cursor: "pointer", fontWeight: 700 }}>{s.profile.trader_name} · book attivo</summary>
             <h4>Book attivo</h4>
             <PositionsTable positions={s.positions} cash={s.profile.cash} prices={prices} fx={fx} />
-            {d && (
-              <>
-                <h4>Ordini salvati per {w?.label} (segreti fino alla chiusura)</h4>
-                <PositionsTable positions={d.positions as Position[]} cash={Number(d.cash)} prices={prices} fx={fx} />
-              </>
-            )}
+            {d && <p className="muted" style={{ fontSize: 13 }}>Ha salvato ordini per {w?.label}: li vedrai alla chiusura.</p>}
           </details>
         );
       })}
 
       <div className="card">
         <h3>Movimenti di cassa</h3>
-        <p className="muted" style={{ marginTop: -6 }}>Dividendi, P&L dei futures, opzioni scadute, vendite forzate.</p>
+        <p className="muted" style={{ marginTop: -6 }}>Dividendi, P&L dei futures, interessi sulla leva, opzioni scadute, vendite forzate.</p>
         <table>
           <tbody>
             {(ledger ?? []).map((l) => (

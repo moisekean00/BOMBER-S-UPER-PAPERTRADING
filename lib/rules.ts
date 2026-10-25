@@ -36,6 +36,7 @@ export type Fx = Record<string, number>; // valuta -> unità per 1 EUR
 export const MARGIN = 0.2;
 export const MAX_LEVERAGE = 5;
 export const MAX_SALE_SHARE = 0.5;
+export const LOAN_RATE = 0.05; // interesse annuo sul prestito degli acquisti a leva, addebitato ogni venerdì
 export const MIN_TYPE_WEIGHT = 0.05;
 export const MANDATORY: Kind[] = ["stock", "etf_equity", "etf_bond"];
 /** Strumenti che si possono comprare a leva (il resto della leva è nei futures e negli ETP). */
@@ -236,7 +237,7 @@ export function checkInstrument(t: Position): string[] {
   return e;
 }
 
-export type LedgerEntry = { symbol: string; kind: "futures_pnl" | "dividend" | "option_expiry" | "forced_sale"; amount: number; note: string };
+export type LedgerEntry = { symbol: string; kind: "futures_pnl" | "dividend" | "option_expiry" | "forced_sale" | "interest"; amount: number; note: string };
 
 /** Regolamento del venerdì: P&L dei futures, opzioni scadute, dividendi. */
 export function settle(
@@ -271,6 +272,11 @@ export function settle(
     if (div && p.kind !== "option") {
       const amount = (p.qty * div) / fxRate(fx, p.currency);
       ledger.push({ symbol: p.symbol, kind: "dividend", amount, note: `${div} ${p.currency} per quota` });
+      cash += amount;
+    }
+    if ((p.debt ?? 0) > 0) {
+      const amount = -((p.debt ?? 0) * LOAN_RATE) / 52;
+      ledger.push({ symbol: p.symbol, kind: "interest", amount, note: `interessi ${LOAN_RATE * 100}% annuo sul prestito` });
       cash += amount;
     }
     out.push(p);

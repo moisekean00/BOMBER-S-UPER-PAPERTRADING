@@ -91,6 +91,13 @@ test("acquisto a leva: capitale 10.000 con leva 3x, poi il titolo sale del 10%",
   assert.deepEqual(applyLineup([], 100_000, [pos("ENI", "stock", 10, { leverage: 6 })], p, {}, { first: true }).errors.filter((e) => e.includes("leva")).length, 1);
 });
 
+test("acquisto a leva: interessi settimanali sul prestito", () => {
+  const held = pos("ENI", "stock", 3000, { leverage: 3, debt: 52_000 });
+  const s = settle([held], 1000, { ENI: 10 }, {}, {}, "2026-11-06");
+  assert.equal(Math.round(s.cash), 1000 - 50);
+  assert.equal(s.ledger[0].kind, "interest");
+});
+
 test("acquisto a leva: vendere tutto restituisce solo il capitale netto e conta nel 50%", () => {
   const held = pos("ENI", "stock", 3000, { leverage: 3, debt: 20_000 });
   const keep = pos("VWCE", "etf_equity", 100);

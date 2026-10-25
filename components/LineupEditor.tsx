@@ -490,7 +490,7 @@ function AddInstrument({ onAdd, cash, total, disabled }: { onAdd: (i: Instrument
               </div>
               {buyLev > 1 && (
                 <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-                  Esposizione {eur(Number(amount.replace(/\./g, "").replace(",", ".")) * buyLev)}: metti {eur(Number(amount.replace(/\./g, "").replace(",", ".")))} di cash, il resto è prestito senza interessi. Guadagni e perdite valgono {buyLev} volte: se il titolo scende del {Math.round(100 / buyLev)}% la posizione vale zero.
+                  Esposizione {eur(Number(amount.replace(/\./g, "").replace(",", ".")) * buyLev)}: metti {eur(Number(amount.replace(/\./g, "").replace(",", ".")))} di cash, il resto è un prestito al 5% annuo (addebitato ogni venerdì). Guadagni e perdite valgono {buyLev} volte: se il titolo scende del {Math.round(100 / buyLev)}% la posizione vale zero.
                 </div>
               )}
             </div>
