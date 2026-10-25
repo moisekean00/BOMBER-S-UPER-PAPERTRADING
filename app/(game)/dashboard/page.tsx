@@ -47,7 +47,7 @@ export default async function Dashboard() {
       <div className="card">
         <div className="section-head">
           <h2>Classifica</h2>
-          <span className="muted" style={{ fontSize: 13 }}>Ufficiale al venerdì · live con ~15&apos; di ritardo</span>
+          <Link href="/classifica" style={{ fontSize: 14, fontWeight: 600 }}>Performance report →</Link>
         </div>
         <Leaderboard list={list} me={user?.id} />
       </div>

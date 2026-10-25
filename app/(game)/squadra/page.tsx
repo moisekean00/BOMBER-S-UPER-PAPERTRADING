@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PositionsTable } from "@/components/PositionsTable";
 import { adminClient, currentUser } from "@/lib/supabase/server";
-import { toPosition, toProfile } from "@/lib/db";
+import { toPosition } from "@/lib/db";
+import { ensureProfile } from "@/lib/game";
 import { livePrices } from "@/lib/live";
 import { standings } from "@/lib/standings";
 import { currentWindow, START_CAPITAL } from "@/lib/calendar";
@@ -14,13 +15,12 @@ const LEDGER: Record<string, string> = { futures_pnl: "Regolamento future", divi
 export default async function MyTeamPage() {
   const user = (await currentUser())!;
   const db = adminClient();
-  const [{ data: prof }, { data: rows }, { data: ledger }, list] = await Promise.all([
-    db.from("profiles").select("*").eq("id", user.id).single(),
+  const profile = await ensureProfile(user);
+  const [{ data: rows }, { data: ledger }, list] = await Promise.all([
     db.from("positions").select("*").eq("user_id", user.id),
     db.from("ledger").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
     standings(),
   ]);
-  const profile = toProfile(prof);
   const me = list.find((s) => s.profile.id === user.id);
   const positions = (rows ?? []).map(toPosition);
   const { prices, fx } = await livePrices(positions);

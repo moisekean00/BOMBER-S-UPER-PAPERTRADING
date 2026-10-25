@@ -32,6 +32,6 @@ export async function POST(req: Request) {
   }
   const upd = await db.auth.admin.updateUserById(user.id, { email_confirm: true, password, user_metadata: { trader_name: name } });
   if (upd.error) return NextResponse.json({ error: upd.error.message }, { status: 400 });
-  await db.from("profiles").update({ trader_name: name }).eq("id", user.id);
+  await db.from("profiles").upsert({ id: user.id, trader_name: name }, { onConflict: "id" });
   return NextResponse.json({ ok: true });
 }

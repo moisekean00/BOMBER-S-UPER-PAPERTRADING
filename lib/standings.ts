@@ -2,7 +2,8 @@ import "server-only";
 import { adminClient } from "./supabase/server";
 import { toPosition, toProfile, type Profile } from "./db";
 import { liveFx, quotes } from "./prices";
-import { valuePortfolio, type Position } from "./rules";
+import { valuePortfolio, type Fx, type Position, type Prices } from "./rules";
+import type { Snapshot } from "./metrics";
 import { START_CAPITAL } from "./calendar";
 
 export type Standing = {
@@ -12,10 +13,17 @@ export type Standing = {
   officialDate: string | null;
   live: number | null; // stima ai prezzi di adesso
   rank: number;
+  history: Snapshot[]; // NAV del venerdì in ordine di data
 };
+
+export type Market = { live: Prices; ref: Prices; daily: Record<string, number | null>; fx: Fx };
 
 /** Classifica: valore ufficiale del venerdì e stima live. */
 export async function standings(): Promise<Standing[]> {
+  return (await standingsWithMarket()).list;
+}
+
+export async function standingsWithMarket(): Promise<{ list: Standing[]; market: Market }> {
   const db = adminClient();
   const [{ data: profs }, { data: rows }, { data: snaps }] = await Promise.all([
     db.from("profiles").select("*"),
@@ -27,10 +35,20 @@ export async function standings(): Promise<Standing[]> {
 
   const all = [...byUser.values()].flat();
   const live: Record<string, number> = {};
+  const daily: Record<string, number | null> = {};
+  const ref: Record<string, number> = {};
   let fx: Record<string, number> = {};
+  const lastDate = (snaps ?? [])[0]?.date as string | undefined;
+  if (lastDate) {
+    const { data: closes } = await db.from("prices").select("symbol,close").eq("date", lastDate);
+    for (const c of closes ?? []) ref[c.symbol] = Number(c.close);
+  }
   try {
     const q = await quotes([...new Set(all.map((p) => p.symbol))]);
-    for (const x of q) live[x.symbol] = x.price;
+    for (const x of q) {
+      live[x.symbol] = x.price;
+      daily[x.symbol] = x.changePct;
+    }
     fx = await liveFx(all.map((p) => p.currency));
   } catch (err) {
     console.error("quotazioni live", err);
@@ -53,6 +71,10 @@ export async function standings(): Promise<Standing[]> {
       officialDate: snap?.date ?? null,
       live: liveValue,
       rank: 0,
+      history: (snaps ?? [])
+        .filter((x) => x.user_id === profile.id)
+        .map((x) => ({ date: x.date as string, total: Number(x.total) }))
+        .reverse(),
     };
   });
   // Eliminati in fondo, in ordine di uscita (chi è uscito prima sta più in basso).
@@ -64,5 +86,5 @@ export async function standings(): Promise<Standing[]> {
     return b.official - a.official;
   });
   list.forEach((s, i) => (s.rank = i + 1));
-  return list;
+  return { list, market: { live, ref, daily, fx } };
 }

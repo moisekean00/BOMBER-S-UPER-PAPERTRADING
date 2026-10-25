@@ -5,6 +5,22 @@ import { officialClose, officialFx, pricesFor, toPosition, toProfile } from "./d
 import { kindMatches, parseOcc } from "./prices";
 import { applyLineup, KIND_LABEL, type Kind, type Position } from "./rules";
 
+/** Profilo del giocatore; se manca (iscrizione fatta prima delle tabelle) lo crea. */
+export async function ensureProfile(user: { id: string; user_metadata?: Record<string, any> }) {
+  const db = adminClient();
+  const { data } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (data) return toProfile(data);
+  const base = String(user.user_metadata?.trader_name ?? "").trim().slice(0, 20) || `Trader ${user.id.slice(0, 4)}`;
+  for (const name of [base, `${base} ${user.id.slice(0, 3)}`]) {
+    const ins = await db.from("profiles").upsert({ id: user.id, trader_name: name }, { onConflict: "id", ignoreDuplicates: true }).select().maybeSingle();
+    if (!ins.error) {
+      const { data: row } = await db.from("profiles").select("*").eq("id", user.id).single();
+      return toProfile(row);
+    }
+  }
+  throw new Error("Impossibile creare il profilo");
+}
+
 export function isAdminEmail(email?: string | null) {
   const list = (process.env.ADMIN_EMAILS ?? "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
   return !!email && list.includes(email.toLowerCase());
@@ -13,13 +29,13 @@ export function isAdminEmail(email?: string | null) {
 /** Tutto ciò che serve all'editor della formazione nella finestra aperta. */
 export async function lineupContext(userId: string, w: Window) {
   const db = adminClient();
-  const { data: prof } = await db.from("profiles").select("*").eq("id", userId).single();
+  const profile = await ensureProfile({ id: userId });
   const { data: rows } = await db.from("positions").select("*").eq("user_id", userId);
   const active = (rows ?? []).map(toPosition);
   const { data: draft } = await userClient().from("lineups").select("*").eq("user_id", userId).eq("window_id", w.id).maybeSingle();
   const target: Position[] = draft ? (draft.positions as Position[]) : active;
   const { prices, fx } = await pricesFor(db, [...active, ...target], w.priceDate);
-  return { profile: toProfile(prof), active, draft: draft ? target : null, prices, fx };
+  return { profile, active, draft: draft ? target : null, prices, fx };
 }
 
 /** Dati ufficiali di uno strumento al venerdì della finestra. */
