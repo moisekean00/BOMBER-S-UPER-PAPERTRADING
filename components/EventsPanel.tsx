@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { EVENT_LABEL, type EventKind, type MarketEvent } from "@/lib/events";
+import { AREAS, EVENT_LABEL, type Area, type EventKind, type MarketEvent } from "@/lib/events";
 
 const COLORS: Record<EventKind, string> = {
   banche: "#2563eb",
@@ -19,7 +19,7 @@ function Row({ e }: { e: MarketEvent }) {
         <span style={{ width: 8, height: 8, borderRadius: 4, background: COLORS[e.kind], marginTop: 7, flex: "none" }} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{e.title}</div>
-          {e.note && <div className="muted" style={{ fontSize: 12 }}>{e.note}</div>}
+          {(e.note || e.area) && <div className="muted" style={{ fontSize: 12 }}>{e.area}{e.note ? ` · ${e.note}` : ""}</div>}
         </div>
       </div>
       <div className="muted num" style={{ fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>
@@ -35,6 +35,7 @@ export function EventsPanel() {
   const [events, setEvents] = useState<MarketEvent[] | null>(null);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<EventKind | "tutti">("tutti");
+  const [area, setArea] = useState<Area | "tutte">("tutte");
   useEffect(() => {
     fetch("/api/events").then((r) => r.json()).then((d) => Array.isArray(d) && setEvents(d)).catch(() => setEvents([]));
   }, []);
@@ -45,7 +46,7 @@ export function EventsPanel() {
     return () => window.removeEventListener("keydown", esc);
   }, [open]);
 
-  const shown = useMemo(() => (events ?? []).filter((e) => filter === "tutti" || e.kind === filter), [events, filter]);
+  const shown = useMemo(() => (events ?? []).filter((e) => (filter === "tutti" || e.kind === filter) && (area === "tutte" || e.area === area)), [events, filter, area]);
   const byMonth = useMemo(() => {
     const m = new Map<string, MarketEvent[]>();
     for (const e of shown) m.set(month(e.date), [...(m.get(month(e.date)) ?? []), e]);
@@ -84,6 +85,14 @@ export function EventsPanel() {
                 </button>
               ))}
             </div>
+            <div className="row" style={{ gap: 6, marginBottom: 12 }}>
+              {(["tutte", ...AREAS] as (Area | "tutte")[]).map((a) => (
+                <button key={a} onClick={() => setArea(a)} className="tag"
+                  style={{ cursor: "pointer", border: "1px solid var(--line)", padding: "5px 11px", background: area === a ? "var(--navy-3)" : "#fff", color: area === a ? "#fff" : "var(--navy-2)" }}>
+                  {a === "tutte" ? "Tutto il mondo" : a}
+                </button>
+              ))}
+            </div>
             {byMonth.length === 0 && <p className="muted">Nessun evento in questa categoria.</p>}
             {byMonth.map(([m, list]) => (
               <div key={m} style={{ marginTop: 14 }}>
@@ -91,7 +100,7 @@ export function EventsPanel() {
                 {list.map((e, i) => <Row key={i} e={e} />)}
               </div>
             ))}
-            <p className="muted" style={{ fontSize: 12, marginTop: 16 }}>Orari italiani. Banche centrali, dati USA ed elezioni dai calendari ufficiali; trimestrali da Yahoo Finance, che a volte stima la data.</p>
+            <p className="muted" style={{ fontSize: 12, marginTop: 16 }}>Orari italiani. Banche centrali, dati macro ed elezioni dai calendari ufficiali (Fed, BCE, BoE, BoJ, BLS, Eurostat, Istat, NBS cinese); trimestrali di USA, Italia, Europa e Asia da Yahoo Finance, che a volte stima la data.</p>
           </div>
         </div>
       )}

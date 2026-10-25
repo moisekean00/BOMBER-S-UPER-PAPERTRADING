@@ -141,7 +141,8 @@ export async function saveLineup(userId: string, raw: unknown[]) {
     return { status: 400, body: { errors: [String((err as Error).message)] } };
   }
   if (r.errors.length) return { status: 400, body: { errors: r.errors } };
+  // I minimi del 5% si possono sistemare con gli ordini successivi: si salva lo stesso.
   const { error } = await db.from("lineups").upsert({ user_id: userId, window_id: w.id, positions: r.positions, cash: r.cash, updated_at: new Date().toISOString() });
   if (error) return { status: 500, body: { errors: [error.message] } };
-  return { status: 200, body: { ok: true, cash: r.cash, sold: r.sold } };
+  return { status: 200, body: { ok: true, cash: r.cash, sold: r.sold, warnings: r.warnings } };
 }

@@ -21,7 +21,7 @@ export default async function TraderPage({ params }: { params: { id: string } })
   const { prices, fx } = await livePrices(positions);
   return (
     <div className="stack">
-      <Link href="/squadre" className="muted">← Squadre</Link>
+      <Link href="/squadre" className="muted">← Traders</Link>
       <div className="card">
         <div className="team-head" style={{ marginBottom: 16 }}>
           <span className="avatar" style={{ width: 52, height: 52, borderRadius: 16, fontSize: 18 }}>{initials(profile.trader_name)}</span>

@@ -4,7 +4,7 @@ import { WINDOWS, VALUATION_DATES, valuationTime, START_CAPITAL, type Window } f
 import { adminClient } from "./supabase/server";
 import { pool, pricesFor, toPosition, toRow } from "./db";
 import { dividendsBetween } from "./prices";
-import { settle, forcedSale, valuePortfolio, type Position, type LedgerEntry } from "./rules";
+import { applyLineup, settle, forcedSale, valuePortfolio, type Position, type LedgerEntry } from "./rules";
 
 const STALE_MS = 5 * 60_000;
 const DIVIDEND_KINDS = new Set(["stock", "etf_equity", "etf_bond", "etf_other", "etp"]);
@@ -126,8 +126,18 @@ async function commitWindow(db: SupabaseClient, w: Window) {
     if (p.eliminated_on) continue;
     const l = byUserLineup.get(p.id);
     if (l) {
-      await savePortfolio(db, p.id, l.positions as Position[], Number(l.cash));
-      continue;
+      // Si ricontrolla il book salvato: se alla chiusura non rispetta le regole
+      // (es. minimi del 5%) resta in vigore il portafoglio precedente.
+      const active = byUser.get(p.id) ?? [];
+      const target = l.positions as Position[];
+      const { prices, fx } = await pricesFor(db, [...active, ...target], w.priceDate);
+      let r: ReturnType<typeof applyLineup> | null = null;
+      try { r = applyLineup(active, Number(p.cash), target, prices, fx, { first: w.first }); } catch (e) { console.error("commit", p.id, e); }
+      if (r && !r.errors.length && !r.warnings.length) {
+        await savePortfolio(db, p.id, r.positions, r.cash);
+        continue;
+      }
+      console.error("book non valido alla chiusura", p.id, r?.errors, r?.warnings);
     }
     if (Number(p.cash) < 0) {
       const positions = byUser.get(p.id) ?? [];

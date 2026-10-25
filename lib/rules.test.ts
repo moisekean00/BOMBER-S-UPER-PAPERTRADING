@@ -19,7 +19,7 @@ test("prima formazione da 100k: ok e cash residuo", () => {
 
 test("minimo 5% per tipo obbligatorio", () => {
   const r = applyLineup([], 100_000, [pos("ENI", "stock", 1000), pos("VWCE", "etf_equity", 400)], prices, fx, { first: true });
-  assert.ok(r.errors.some((e) => e.includes("ETF obbligazionario")));
+  assert.ok(r.warnings.some((e) => e.includes("ETF obbligazionario")));
 });
 
 test("limite del 50% sulle vendite", () => {

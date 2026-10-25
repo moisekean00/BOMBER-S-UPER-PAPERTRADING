@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { applyLineup, KIND_LABEL, MANDATORY, MARGIN_KINDS, MAX_LEVERAGE, positionValue, type Kind, type Position, type Prices, type Fx } from "@/lib/rules";
+import { applyLineup, KIND_LABEL, MANDATORY, MARGIN, MARGIN_KINDS, MAX_LEVERAGE, notional, positionValue, type Kind, type Position, type Prices, type Fx } from "@/lib/rules";
 import type { Window } from "@/lib/calendar";
 import { eur, pctChange } from "./format";
 
@@ -107,18 +107,23 @@ export function LineupEditor() {
     delete newPrices[i.option?.underlying ?? "__"];
     setPrices(newPrices);
     setFx(newFx);
-    setTarget((t) => [...t.filter((p) => p.symbol !== i.symbol), base]);
+    // Ricomprare un titolo che hai già aggiunge alla posizione (la leva scelta vale per tutta).
+    const held = target.find((p) => p.symbol === i.symbol && p.kind === kind);
+    const order = held ? { ...held, qty: held.qty + base.qty, leverage: base.leverage } : base;
+    const next = [...target.filter((p) => p.symbol !== i.symbol), order];
+    setTarget(next);
     setDirty(true);
     setSaved(null);
+    save(next);
   }
 
-  async function save() {
+  async function save(list: Position[] = target) {
     setSaving(true);
     setServerErrors([]);
     const res = await fetch("/api/lineup", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ positions: target.map(({ symbol, kind, qty, leverage }) => ({ symbol, kind, qty, leverage })) }),
+      body: JSON.stringify({ positions: list.map(({ symbol, kind, qty, leverage }) => ({ symbol, kind, qty, leverage })) }),
     }).catch(() => null);
     setSaving(false);
     const body = res ? await res.json().catch(() => ({})) : {};
@@ -130,6 +135,7 @@ export function LineupEditor() {
   if (loadError) return <div className="card"><div className="notice err">{loadError}</div></div>;
   if (!ctx || !preview) return <div className="card"><p className="muted">Carico i prezzi di chiusura del venerdì…</p></div>;
   const errors = "error" in preview ? [preview.error] : preview.errors;
+  const warnings = "error" in preview ? [] : preview.warnings;
   const r = "error" in preview ? null : preview;
   const priceDay = new Date(`${ctx.window.priceDate}T12:00:00Z`).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
 
@@ -137,14 +143,15 @@ export function LineupEditor() {
     <div className="card">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
-          <h2 style={{ margin: 0 }}>La tua formazione</h2>
-          <div className="muted" style={{ fontSize: 13 }}>Prezzi di chiusura di {priceDay}. Puoi cambiarla fino alla scadenza: vale l&apos;ultima versione salvata.</div>
+          <div className="eyebrow">Your</div>
+          <h2 style={{ margin: 0 }}>Super Bomber Book</h2>
+          <div className="muted" style={{ fontSize: 13 }}>Prezzi di chiusura di {priceDay}. Ogni ordine confermato si salva subito; puoi cambiare fino alla scadenza.</div>
         </div>
-        <span className="tag">{ctx.draft ? "Bozza salvata" : "Nessun cambio salvato"}</span>
+        <span className="tag">{saved || ctx.draft ? "Ordini salvati" : "Nessun ordine"}</span>
       </div>
 
       {!ctx.window.demo && !ctx.profile.paid && (
-        <div className="notice info" style={{ marginTop: 12 }}>Per schierare la formazione devi prima versare la quota di 50 € a Pier su Revolut.</div>
+        <div className="notice info" style={{ marginTop: 12 }}>Per fare ordini devi prima versare la quota di 50 € a Pier su Revolut.</div>
       )}
 
       {r && (
@@ -180,6 +187,8 @@ export function LineupEditor() {
         </div>
       )}
 
+      {r && <Summary active={ctx.active} result={r} prices={prices} fx={fx} />}
+
       <div className="table-wrap" style={{ marginTop: 16 }}>
         <table>
           <thead>
@@ -206,11 +215,17 @@ export function LineupEditor() {
         </table>
       </div>
 
-      <AddInstrument onAdd={add} />
+      <AddInstrument onAdd={add} cash={r?.cash ?? ctx.profile.cash} total={r?.total ?? ctx.profile.cash} disabled={saving || (!ctx.window.demo && !ctx.profile.paid)} />
 
       {errors.length > 0 && (
         <div className="notice err" style={{ marginTop: 16 }}>
           {errors.map((e) => <div key={e}>• {e}</div>)}
+        </div>
+      )}
+      {warnings.length > 0 && (
+        <div className="notice warn" style={{ marginTop: 12 }}>
+          <b>Da sistemare entro la scadenza</b>, altrimenti alla chiusura resta in vigore il book precedente:
+          {warnings.map((e) => <div key={e}>• {e}</div>)}
         </div>
       )}
       {serverErrors.length > 0 && (
@@ -218,12 +233,12 @@ export function LineupEditor() {
           {serverErrors.map((e) => <div key={e}>• {e}</div>)}
         </div>
       )}
-      {saved && !dirty && <div className="notice ok" style={{ marginTop: 12 }}>Formazione salvata alle {saved}. Diventa attiva alla chiusura del mercato.</div>}
+      {saved && !dirty && <div className="notice ok" style={{ marginTop: 12 }}>Ordini salvati alle {saved}. Diventano operativi alla chiusura del mercato, ai prezzi del venerdì.</div>}
 
       <div className="row" style={{ marginTop: 16, justifyContent: "flex-end" }}>
-        <button className="btn ghost" onClick={() => { setTarget(ctx.active); setDirty(true); setSaved(null); }}>Riparti dal portafoglio attivo</button>
-        <button className="btn" onClick={save} disabled={saving || errors.length > 0 || (!ctx.window.demo && !ctx.profile.paid)}>
-          {saving ? "Salvo…" : "Salva formazione"}
+        <button className="btn ghost" onClick={() => { setTarget(ctx.active); save(ctx.active); }}>Annulla tutti gli ordini</button>
+        <button className="btn" onClick={() => save()} disabled={saving || !dirty || errors.length > 0 || (!ctx.window.demo && !ctx.profile.paid)}>
+          {saving ? "Salvo…" : dirty ? "Salva le modifiche" : "Tutto salvato"}
         </button>
       </div>
     </div>
@@ -265,8 +280,8 @@ function EditRow({ p, prices, fx, margin, net, onChange, onRemove }: { p: Positi
         )}
         {levered && (
           <div style={{ marginTop: 6 }}>
-            <select style={{ width: 84, padding: "4px 6px" }} value={lev} onChange={(e) => setLev(Number(e.target.value))} aria-label="Leva">
-              {Array.from({ length: MAX_LEVERAGE }, (_, i) => i + 1).map((l) => <option key={l} value={l}>{l === 1 ? "No leva" : `Leva ${l}x`}</option>)}
+            <select style={{ width: 96, padding: "4px 6px" }} value={lev} onChange={(e) => setLev(Number(e.target.value))} aria-label="Leva">
+              {Array.from({ length: MAX_LEVERAGE }, (_, i) => i + 1).map((l) => <option key={l} value={l}>{l === 1 ? "1x" : `Leva ${l}x`}</option>)}
             </select>
           </div>
         )}
@@ -294,7 +309,7 @@ function EditRow({ p, prices, fx, margin, net, onChange, onRemove }: { p: Positi
   );
 }
 
-function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur: number, contracts: number, leverage: number) => void }) {
+function AddInstrument({ onAdd, cash, total, disabled }: { onAdd: (i: Instrument, kind: Kind, amountEur: number, contracts: number, leverage: number) => void; cash: number; total: number; disabled: boolean }) {
   const [tab, setTab] = useState<"search" | "options">("search");
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -304,6 +319,7 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
   const [contracts, setContracts] = useState("1");
   const [leverage, setLeverage] = useState("2");
   const [buyLev, setBuyLev] = useState(1);
+  const [ticket, setTicket] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [chain, setChain] = useState<Chain | null>(null);
@@ -350,9 +366,22 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
     if (!picked) return;
     onAdd(picked, kind, Number(amount.replace(/\./g, "").replace(",", ".")), Number(contracts.replace(",", ".")), kind === "etp" ? Number(leverage.replace(",", ".")) : buyLev);
     setPicked(null);
+    setTicket(false);
     setQ("");
     setChain(null);
   }
+
+  // Riepilogo dell'ordine prima della conferma.
+  const order = useMemo(() => {
+    if (!picked) return null;
+    const amt = Number(amount.replace(/\./g, "").replace(",", "."));
+    const n = Number(contracts.replace(",", "."));
+    const unit = ((kind === "option" ? 100 : 1) * picked.price) / (picked.currency === "EUR" ? 1 : picked.fx);
+    const lev = MARGIN_KINDS.includes(kind) ? buyLev : 1;
+    const exposure = kind === "option" ? n * unit : amt * lev;
+    const cashOut = kind === "future" ? MARGIN * amt : kind === "option" ? exposure : amt;
+    return { qty: exposure / unit, exposure, cashOut, lev, ok: isFinite(cashOut) && cashOut > 0 };
+  }, [picked, amount, contracts, kind, buyLev]);
 
   return (
     <div style={{ marginTop: 20, background: "var(--bg)", borderRadius: 18, padding: 18 }}>
@@ -467,12 +496,76 @@ function AddInstrument({ onAdd }: { onAdd: (i: Instrument, kind: Kind, amountEur
             </div>
           )}
           {kind === "future" && <div className="muted" style={{ fontSize: 13 }}>Si blocca il 20% dell&apos;esposizione come margine. Per andare short cambia Long/Short nella tabella dopo averlo aggiunto.</div>}
-          <div className="row">
-            <button className="btn" onClick={confirm}>Compra</button>
-            <button className="btn ghost" onClick={() => setPicked(null)}>Annulla</button>
-          </div>
+          {!ticket ? (
+            <div className="row">
+              <button className="btn" onClick={() => setTicket(true)} disabled={!order?.ok}>Compra</button>
+              <button className="btn ghost" onClick={() => setPicked(null)}>Annulla</button>
+            </div>
+          ) : order && (
+            <div className="ticket">
+              <div className="eyebrow">Riepilogo ordine</div>
+              <dl>
+                <dt>Strumento</dt><dd><b>{picked.symbol}</b> · {KIND_LABEL[kind]}</dd>
+                <dt>Prezzo (chiusura ven.)</dt><dd className="num">{picked.price.toLocaleString("it-IT", { maximumFractionDigits: 4 })} {picked.currency}</dd>
+                <dt>{kind === "option" ? "Contratti" : "Quantità"}</dt><dd className="num">{kind === "option" ? contracts : order.qty.toLocaleString("it-IT", { maximumFractionDigits: 3 })}</dd>
+                <dt>Esposizione</dt><dd className="num">{eur(order.exposure)}{order.lev > 1 ? ` (leva ${order.lev}x)` : kind === "future" ? " (leva 5x)" : ""}</dd>
+                <dt>{kind === "future" ? "Margine bloccato" : "Cash impegnato"}</dt><dd className="num"><b>{eur(order.cashOut)}</b></dd>
+                <dt>Cash disponibile</dt><dd className="num">{eur(cash)} → <span className={cash - order.cashOut < 0 ? "down" : ""}>{eur(cash - order.cashOut)}</span></dd>
+                <dt>Peso sul book</dt><dd className="num">{pctChange(order.cashOut / Math.max(1, total)).replace("+", "")}</dd>
+              </dl>
+              {cash - order.cashOut < 0 && <div className="notice err" style={{ marginBottom: 10 }}>Cash insufficiente: riduci l&apos;importo o vendi qualcosa.</div>}
+              <div className="row">
+                <button className="btn" onClick={confirm} disabled={disabled || cash - order.cashOut < 0}>Conferma ordine</button>
+                <button className="btn ghost" onClick={() => setTicket(false)}>Modifica</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Riepilogo del book: subtotali per classe, cash, esposizione e ordini della finestra. */
+function Summary({ active, result, prices, fx }: { active: Position[]; result: { positions: Position[]; cash: number; total: number }; prices: Prices; fx: Fx }) {
+  const val = (p: Position) => { try { return positionValue(p, prices, fx); } catch { return 0; } };
+  const gross = (p: Position) => { try { return Math.abs(notional(p, prices[p.symbol], fx)); } catch { return 0; } };
+  const byKind = new Map<Kind, number>();
+  for (const p of result.positions) byKind.set(p.kind, (byKind.get(p.kind) ?? 0) + val(p));
+  const exposure = result.positions.reduce((s, p) => s + gross(p), 0);
+  const before = new Map(active.map((p) => [p.symbol, val(p)]));
+  const after = new Map(result.positions.map((p) => [p.symbol, val(p)]));
+  const orders = [...new Set([...before.keys(), ...after.keys()])]
+    .map((sym) => ({ sym, delta: (after.get(sym) ?? 0) - (before.get(sym) ?? 0) }))
+    .filter((o) => Math.abs(o.delta) >= 1);
+  const t = Math.max(1, result.total);
+  return (
+    <div className="grid-2" style={{ marginTop: 16 }}>
+      <div className="stat flat">
+        <div className="label">Riepilogo book</div>
+        <table className="mini">
+          <tbody>
+            {[...byKind.entries()].map(([k, v]) => (
+              <tr key={k}><td>{KIND_LABEL[k]}</td><td className="r num">{eur(v)}</td><td className="r num muted">{pctChange(v / t).replace("+", "")}</td></tr>
+            ))}
+            <tr><td>Cash</td><td className="r num">{eur(result.cash)}</td><td className="r num muted">{pctChange(result.cash / t).replace("+", "")}</td></tr>
+            <tr className="total"><td>Totale (NAV)</td><td className="r num">{eur(result.total)}</td><td className="r num muted">100%</td></tr>
+            <tr><td>Esposizione lorda</td><td className="r num">{eur(exposure)}</td><td className="r num muted">{(exposure / t).toLocaleString("it-IT", { maximumFractionDigits: 2 })}x</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="stat flat">
+        <div className="label">Ordini di questa finestra</div>
+        {orders.length === 0 ? <p className="muted" style={{ fontSize: 13 }}>Nessun ordine: se non fai niente resta il book attuale.</p> : (
+          <table className="mini">
+            <tbody>
+              {orders.map((o) => (
+                <tr key={o.sym}><td><span className={`tag ${o.delta < 0 ? "down" : ""}`}>{o.delta > 0 ? "BUY" : "SELL"}</span> {o.sym}</td><td className={`r num ${o.delta > 0 ? "up" : "down"}`}>{o.delta > 0 ? "+" : "−"}{eur(Math.abs(o.delta))}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

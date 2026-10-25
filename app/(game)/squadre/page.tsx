@@ -15,8 +15,8 @@ export default async function TeamsPage() {
   return (
     <div className="stack">
       <div className="card">
-        <div className="eyebrow">Squadre</div>
-        <h1 style={{ margin: 0, fontSize: "1.8rem" }}>Le rose della lega</h1>
+        <div className="eyebrow">Traders</div>
+        <h1 style={{ margin: 0, fontSize: "1.8rem" }}>I book di tutti i trader</h1>
         <p className="muted" style={{ margin: "6px 0 0" }}>I portafogli attivi di tutti. Gli acquisti del mercato in corso restano segreti fino alla chiusura.</p>
       </div>
       <div className="teams">

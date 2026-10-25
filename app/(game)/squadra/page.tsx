@@ -31,9 +31,10 @@ export default async function MyTeamPage() {
         <div className="team-head">
           <span className="avatar" style={{ width: 56, height: 56, borderRadius: 16, fontSize: 20 }}>{initials(profile.trader_name)}</span>
           <div style={{ flex: 1 }}>
-            <div className="eyebrow">La mia squadra</div>
+            <div className="eyebrow">My Super Bomber Book</div>
             <h1 style={{ margin: 0, fontSize: "1.8rem" }}>{profile.trader_name}</h1>
           </div>
+          <Link className="btn ghost small" href="/impostazioni">Impostazioni</Link>
           {w && <Link className="btn" href="/mercato">Vai al mercato</Link>}
         </div>
       </div>

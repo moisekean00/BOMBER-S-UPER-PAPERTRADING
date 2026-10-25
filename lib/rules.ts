@@ -90,7 +90,8 @@ export type LineupResult = {
   saleLimit: number; // Infinity nella prima finestra
   changed: boolean;
   weights: Partial<Record<Kind, number>>;
-  errors: string[];
+  errors: string[]; // bloccano il salvataggio
+  warnings: string[]; // si può salvare, ma alla chiusura il book deve essere a posto
 };
 
 const key = (p: Position) => p.symbol;
@@ -175,18 +176,19 @@ export function applyLineup(
   }
   if (cash < -EPS) errors.push(`Cash insufficiente: mancano ${fmt(-cash)} €`);
 
+  const warnings: string[] = [];
   const after = valuePortfolio(out, cash, prices, fx);
   const weights: Partial<Record<Kind, number>> = {};
   for (const k of Object.keys(after.byKind) as Kind[]) weights[k] = (after.byKind[k] ?? 0) / after.total;
   if (changed || opts.first) {
     for (const k of MANDATORY) {
       if ((weights[k] ?? 0) < MIN_TYPE_WEIGHT - 1e-6) {
-        errors.push(`${KIND_LABEL[k]}: serve almeno il 5% del portafoglio (ora ${pct(weights[k] ?? 0)})`);
+        warnings.push(`${KIND_LABEL[k]}: serve almeno il 5% del portafoglio (ora ${pct(weights[k] ?? 0)})`);
       }
     }
   }
 
-  return { positions: out, cash, total: after.total, sold, saleLimit, changed, weights, errors };
+  return { positions: out, cash, total: after.total, sold, saleLimit, changed, weights, errors, warnings };
 }
 
 function moveFuture(old: Position | undefined, t: Position, price: number, fx: Fx) {
