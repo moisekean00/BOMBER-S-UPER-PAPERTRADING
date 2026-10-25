@@ -10,6 +10,7 @@ import { START_CAPITAL } from "@/lib/calendar";
 import { KIND_LABEL, notional, positionValue, type Kind } from "@/lib/rules";
 import { maxDrawdown, sharpe, volatility, weeklyReturns } from "@/lib/metrics";
 import { AnalyticsCharts } from "@/components/AnalyticsCharts";
+import { AnalystButton } from "@/components/AnalystButton";
 import { eur, pctChange, cls } from "@/components/format";
 
 export const dynamic = "force-dynamic";
@@ -138,7 +139,12 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: { 
                     <td className={`r num ${cls(f.revenueGrowth ?? 0)}`}>{pct(f.revenueGrowth)}</td>
                     <td className="r num">{pct(f.roe)}</td>
                     <td className="r"><Range52 f={f} /></td>
-                    <td className="r num">{f.target ? `${x2(f.target)} ${f.price ? `(${pctChange(f.target / f.price - 1)})` : ""}` : "—"}<div className="muted" style={{ fontSize: 11 }}>{f.recommendation ? `${REC[f.recommendation] ?? f.recommendation}${f.analysts ? ` · ${f.analysts} analisti` : ""}` : ""}</div></td>
+                    <td className="r num">{f.target || f.recommendation ? (
+                      <AnalystButton symbol={f.symbol}>
+                        {f.target ? `${x2(f.target)} ${f.price ? `(${pctChange(f.target / f.price - 1)})` : ""}` : "Vedi"}
+                        <div className="muted" style={{ fontSize: 11 }}>{f.recommendation ? `${REC[f.recommendation] ?? f.recommendation}${f.analysts ? ` · ${f.analysts} analisti` : ""}` : ""}</div>
+                      </AnalystButton>
+                    ) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -204,7 +210,12 @@ function FundCards({ f }: { f: Fundamentals }) {
   ];
   return (
     <div className="grid-4" style={{ marginTop: 12 }}>
-      {items.map(([k, v]) => <div key={k} className="stat flat"><div className="label">{k}</div><div className="value num" style={{ fontSize: "1.1rem" }}>{v}</div></div>)}
+      {items.map(([k, v]) => (
+        <div key={k} className="stat flat">
+          <div className="label">{k}</div>
+          <div className="value num" style={{ fontSize: "1.1rem" }}>{k === "Target analisti" && f.target ? <AnalystButton symbol={f.symbol}>{v}</AnalystButton> : v}</div>
+        </div>
+      ))}
     </div>
   );
 }

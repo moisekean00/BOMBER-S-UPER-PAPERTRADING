@@ -157,3 +157,45 @@ export async function news(symbols: string[]): Promise<News[]> {
   const seen = new Set<string>();
   return lists.flat().filter((n) => n.link && !seen.has(n.id) && seen.add(n.id)).sort((a, b) => b.time.localeCompare(a.time));
 }
+
+export type Analysts = {
+  symbol: string;
+  name: string;
+  currency: string | null;
+  price: number | null;
+  targets: { low: number | null; mean: number | null; median: number | null; high: number | null };
+  count: number | null;
+  recommendation: string | null;
+  trend: { period: string; strongBuy: number; buy: number; hold: number; sell: number; strongSell: number }[];
+  history: { date: string; firm: string; action: string; from: string | null; to: string; target: number | null; prior: number | null; targetAction: string | null }[];
+};
+
+/** Consenso e storico dei giudizi dei broker (Yahoo Finance). */
+export async function analysts(symbol: string): Promise<Analysts> {
+  return cached(`a:${symbol}`, 3 * 3600_000, async () => {
+    const r = (await yf.quoteSummary(symbol, { modules: ["price", "financialData", "recommendationTrend", "upgradeDowngradeHistory"] }, { validateResult: false })) as any;
+    const f = r.financialData ?? {};
+    return {
+      symbol,
+      name: r.price?.shortName ?? r.price?.longName ?? symbol,
+      currency: f.financialCurrency ?? r.price?.currency ?? null,
+      price: num(f.currentPrice) ?? num(r.price?.regularMarketPrice),
+      targets: { low: num(f.targetLowPrice), mean: num(f.targetMeanPrice), median: num(f.targetMedianPrice), high: num(f.targetHighPrice) },
+      count: num(f.numberOfAnalystOpinions),
+      recommendation: f.recommendationKey ?? null,
+      trend: ((r.recommendationTrend?.trend ?? []) as any[]).map((t) => ({
+        period: t.period, strongBuy: t.strongBuy ?? 0, buy: t.buy ?? 0, hold: t.hold ?? 0, sell: t.sell ?? 0, strongSell: t.strongSell ?? 0,
+      })),
+      history: ((r.upgradeDowngradeHistory?.history ?? []) as any[]).slice(0, 40).map((h) => ({
+        date: new Date(h.epochGradeDate).toISOString().slice(0, 10),
+        firm: h.firm,
+        action: h.action,
+        from: h.fromGrade || null,
+        to: h.toGrade,
+        target: num(h.currentPriceTarget) || null,
+        prior: num(h.priorPriceTarget) || null,
+        targetAction: h.priceTargetAction || null,
+      })),
+    };
+  });
+}
