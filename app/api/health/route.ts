@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { quotes } from "@/lib/prices";
+import { dbUrl, migrate } from "@/lib/migrate";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,9 @@ export async function GET() {
       SUPABASE_SERVICE_ROLE_KEY: service ? `${service.slice(0, 9)}… (${service.length} car.)` : false,
       ADMIN_EMAILS: !!process.env.ADMIN_EMAILS,
       CRON_SECRET: !!process.env.CRON_SECRET,
+      POSTGRES_URL: dbUrl() ? dbUrl().replace(/\/\/[^@]*@/, "//***@").replace(/^(postgres(?:ql)?:\/\/\*\*\*@[^:/]+).*/, "$1…") : false,
     },
+    migrate: await migrate(),
   };
   if (url && service) {
     const db = createClient(url, service, { auth: { persistSession: false } });

@@ -21,6 +21,19 @@ export async function ensureProfile(user: { id: string; user_metadata?: Record<s
   throw new Error("Impossibile creare il profilo");
 }
 
+/** Commissario: chi è in ADMIN_EMAILS oppure, in mancanza, il primo iscritto. */
+export async function isAdmin(user?: { id: string; email?: string | null } | null) {
+  if (!user) return false;
+  if (isAdminEmail(user.email)) return true;
+  const db = adminClient();
+  const { data: admins } = await db.from("profiles").select("id").eq("is_admin", true);
+  if (admins?.length) return admins.some((a) => a.id === user.id);
+  const { data: first } = await db.from("profiles").select("id").order("created_at").limit(1).maybeSingle();
+  if (first?.id !== user.id) return false;
+  await db.from("profiles").update({ is_admin: true }).eq("id", user.id);
+  return true;
+}
+
 export function isAdminEmail(email?: string | null) {
   const list = (process.env.ADMIN_EMAILS ?? "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
   return !!email && list.includes(email.toLowerCase());

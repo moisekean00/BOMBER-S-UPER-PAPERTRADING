@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { adminClient, currentUser } from "@/lib/supabase/server";
-import { isAdminEmail } from "@/lib/game";
+import { isAdmin } from "@/lib/game";
 import { PaidToggle } from "@/components/PaidToggle";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const user = await currentUser();
-  if (!isAdminEmail(user?.email)) redirect("/dashboard");
+  if (!(await isAdmin(user))) redirect("/dashboard");
   const db = adminClient();
   const [{ data: profiles }, { data: jobs }] = await Promise.all([
     db.from("profiles").select("*").order("created_at"),
