@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { EventsPanel } from "./EventsPanel";
 
 type Q = { symbol: string; name: string; price: number; changePct: number | null; currency: string };
 
@@ -56,6 +57,7 @@ export function TickerRail({ mine = [] }: { mine?: { symbol: string; name: strin
 
   return (
     <aside className="rail stack">
+      <EventsPanel />
       <div className="card">
         <div className="section-head" style={{ marginBottom: 4 }}>
           <h3 style={{ margin: 0 }}>Mercati</h3>

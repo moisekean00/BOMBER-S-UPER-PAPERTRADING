@@ -21,8 +21,8 @@ export async function GET() {
   if (url && service) {
     const db = createClient(url, service, { auth: { persistSession: false } });
     for (const t of ["profiles", "positions", "lineups", "prices", "snapshots", "ledger", "jobs"]) {
-      const r = await db.from(t).select("*", { count: "exact", head: true });
-      out[`table_${t}`] = r.error ? `ERRORE: ${r.error.message}` : `ok (${r.count} righe)`;
+      const r = await db.from(t).select("*", { count: "exact" }).limit(1);
+      out[`table_${t}`] = r.error ? `ERRORE: ${r.error.message}` : `ok (${r.count ?? 0} righe)`;
     }
     const users = await db.auth.admin.listUsers({ perPage: 50 });
     out.auth_users = users.error ? `ERRORE: ${users.error.message}` : users.data.users.length;
