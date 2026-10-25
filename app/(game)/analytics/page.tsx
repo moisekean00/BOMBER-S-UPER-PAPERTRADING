@@ -85,7 +85,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: { 
             {book.source === "ordini" ? "Analisi del book dopo gli ordini di questa finestra (non ancora eseguiti)." : "Analisi del book attivo."} Prezzi live con ~15&apos; di ritardo.
           </p>
         </div>
-        <Link href="/squadra" className="btn ghost small">My Book</Link>
+        <Link href="/squadra" className="btn ghost small">Personal Book</Link>
       </div>
 
       <div className="grid-5">
