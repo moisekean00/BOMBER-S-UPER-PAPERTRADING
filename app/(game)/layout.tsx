@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Nav } from "@/components/Nav";
 import { TickerRail } from "@/components/TickerRail";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { adminClient, currentUser } from "@/lib/supabase/server";
 import { ensureState } from "@/lib/engine";
 import { ensureProfile, isAdmin } from "@/lib/game";
@@ -17,6 +18,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   const { data: mine } = await adminClient().from("positions").select("symbol,name,kind").eq("user_id", user.id);
   return (
     <>
+      <AutoRefresh />
       <Nav trader={profile?.trader_name ?? "Trader"} admin={await isAdmin(user)} />
       <div className="shell">
         <main style={{ minWidth: 0 }}>{children}</main>
