@@ -41,10 +41,10 @@ export function Nav({ trader, admin }: { trader: string; admin: boolean }) {
         <button className="btn ghost small" onClick={logout}>Esci</button>
       </header>
       <nav className="tabbar">
-        {LINKS.filter((l) => l.href !== "/regolamento" && l.href !== "/stars").map((l) => (
+        {LINKS.filter((l) => l.href !== "/regolamento").map((l) => (
           <Link key={l.href} href={l.href} className={path.startsWith(l.href) ? "active" : ""}>
             {l.icon}
-            {l.label}
+            {l.label === "Personal Book" ? "Book" : l.label === "Classifica" ? "Classif." : l.label}
           </Link>
         ))}
       </nav>
