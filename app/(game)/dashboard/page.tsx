@@ -17,6 +17,7 @@ export default async function Dashboard() {
     <div className="stack">
       <div className="card hero">
         <Countdown />
+        <Link className="btn small" href="/stars" style={{ position: "relative", marginTop: 14, background: "rgba(255,255,255,0.12)", color: "#fff" }}>⭐ Star del mercato</Link>
         {w && (
           <div className="row" style={{ marginTop: 18, position: "relative" }}>
             <Link className="btn white" href="/mercato">{w.demo ? "Prova il mercato" : "Vai al mercato"}</Link>

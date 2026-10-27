@@ -4,13 +4,13 @@ import { currentWindow } from "@/lib/calendar";
 
 export const dynamic = "force-dynamic";
 
-export default function MarketPage() {
+export default function MarketPage({ searchParams }: { searchParams: { buy?: string } }) {
   const w = currentWindow();
   return (
     <div className="stack">
       <div className="card hero"><Countdown /></div>
       {w ? (
-        <LineupEditor />
+        <LineupEditor buy={searchParams.buy?.trim().toUpperCase().slice(0, 30)} />
       ) : (
         <div className="card">
           <h2>Il mercato è chiuso</h2>

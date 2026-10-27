@@ -38,7 +38,7 @@ function unitEur(p: { multiplier: number; currency: string; symbol: string }, pr
   return (p.multiplier * (prices[p.symbol] ?? NaN)) / rate;
 }
 
-export function LineupEditor() {
+export function LineupEditor({ buy }: { buy?: string } = {}) {
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [target, setTarget] = useState<Position[]>([]);
   const [prices, setPrices] = useState<Prices>({});
@@ -215,7 +215,7 @@ export function LineupEditor() {
         </table>
       </div>
 
-      <AddInstrument onAdd={add} cash={r?.cash ?? ctx.profile.cash} total={r?.total ?? ctx.profile.cash} disabled={saving || (!ctx.window.demo && !ctx.profile.paid)} />
+      <AddInstrument buy={buy} onAdd={add} cash={r?.cash ?? ctx.profile.cash} total={r?.total ?? ctx.profile.cash} disabled={saving || (!ctx.window.demo && !ctx.profile.paid)} />
 
       {errors.length > 0 && (
         <div className="notice err" style={{ marginTop: 16 }}>
@@ -309,7 +309,7 @@ function EditRow({ p, prices, fx, margin, net, onChange, onRemove }: { p: Positi
   );
 }
 
-function AddInstrument({ onAdd, cash, total, disabled }: { onAdd: (i: Instrument, kind: Kind, amountEur: number, contracts: number, leverage: number) => void; cash: number; total: number; disabled: boolean }) {
+function AddInstrument({ buy, onAdd, cash, total, disabled }: { buy?: string; onAdd: (i: Instrument, kind: Kind, amountEur: number, contracts: number, leverage: number) => void; cash: number; total: number; disabled: boolean }) {
   const [tab, setTab] = useState<"search" | "options">("search");
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -332,6 +332,12 @@ function AddInstrument({ onAdd, cash, total, disabled }: { onAdd: (i: Instrument
     }, 300);
     return () => clearTimeout(t);
   }, [q, tab]);
+
+  // Arrivo dalla pagina Star: il titolo è già scelto.
+  useEffect(() => {
+    if (buy) { setQ(buy); pick(buy); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buy]);
 
   async function pick(symbol: string, quoteType?: string) {
     setBusy(true);
