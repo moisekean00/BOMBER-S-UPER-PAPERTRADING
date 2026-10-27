@@ -64,6 +64,13 @@ test("opzione scaduta: valore intrinseco in cash", () => {
   assert.equal(Math.round(s.cash), 1600); // 2*100*10/1.25
 });
 
+test("opzione scaduta senza prezzo del sottostante: vale l'ultimo prezzo dell'opzione", () => {
+  const opt = pos("SPXWC", "option", 1, { currency: "USD", multiplier: 100, expiry: "2026-11-06", underlying: "SPXW", strike: 5000, optType: "C" });
+  const s = settle([opt], 0, { SPXWC: 12.5 }, fx, {}, "2026-11-06");
+  assert.equal(s.positions.length, 0);
+  assert.equal(Math.round(s.cash), 1000); // 1*100*12,5/1,25
+});
+
 test("dividendi accreditati in cash", () => {
   const s = settle(base, 0, prices, fx, { ENI: 0.5 }, "2026-11-06");
   assert.equal(s.cash, 500);

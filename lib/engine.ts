@@ -55,11 +55,19 @@ async function loadAll(db: SupabaseClient) {
 }
 
 async function savePortfolio(db: SupabaseClient, userId: string, positions: Position[], cash: number, extra: Record<string, unknown> = {}) {
-  const del = await db.from("positions").delete().eq("user_id", userId);
-  if (del.error) throw del.error;
+  // Prima si scrivono le posizioni nuove, poi si tolgono le vecchie: se il lavoro
+  // si interrompe a metà il book non resta mai vuoto.
   if (positions.length) {
-    const ins = await db.from("positions").insert(positions.map((p) => toRow(userId, p)));
-    if (ins.error) throw ins.error;
+    const up = await db.from("positions").upsert(positions.map((p) => toRow(userId, p)), { onConflict: "user_id,symbol" });
+    if (up.error) throw up.error;
+  }
+  const { data: rows, error } = await db.from("positions").select("symbol").eq("user_id", userId);
+  if (error) throw error;
+  const keep = new Set(positions.map((p) => p.symbol));
+  const gone = (rows ?? []).map((r) => r.symbol as string).filter((s) => !keep.has(s));
+  if (gone.length) {
+    const del = await db.from("positions").delete().eq("user_id", userId).in("symbol", gone);
+    if (del.error) throw del.error;
   }
   const up = await db.from("profiles").update({ cash, ...extra }).eq("id", userId);
   if (up.error) throw up.error;
@@ -84,17 +92,19 @@ async function settleDay(db: SupabaseClient, date: string) {
       await db.from("snapshots").upsert({ user_id: p.id, date, total: START_CAPITAL, cash: START_CAPITAL });
     }
     await db.from("ledger").delete().lt("date", date);
+    await db.from("snapshots").delete().lt("date", date);
+    await db.from("trades").delete().eq("window_id", 0);
     return;
   }
 
   const { profiles, byUser } = await loadAll(db);
-  const active = profiles.filter((p) => !p.eliminated_on);
+  // Chi ha già la valutazione di questa data è a posto (il lavoro può ripartire dopo un'interruzione).
+  const { data: done } = await db.from("snapshots").select("user_id").eq("date", date);
+  const settled = new Set((done ?? []).map((r) => r.user_id as string));
+  const active = profiles.filter((p) => !p.eliminated_on && !settled.has(p.id));
   const all = active.flatMap((p) => byUser.get(p.id) ?? []);
-  const needed = all.filter((p) => !(p.kind === "option" && p.expiry && p.expiry <= date));
-  const underlyings = all
-    .filter((p) => p.kind === "option" && p.expiry && p.expiry <= date && p.underlying)
-    .map((p) => ({ ...p, symbol: p.underlying!, kind: "stock" as const }));
-  const { prices, fx } = await pricesFor(db, [...needed, ...underlyings], date);
+  // pricesFor aggiunge da solo i sottostanti delle opzioni (servono per quelle in scadenza).
+  const { prices, fx } = await pricesFor(db, all, date);
 
   const dividends: Record<string, number> = {};
   if (prev) {
@@ -109,13 +119,23 @@ async function settleDay(db: SupabaseClient, date: string) {
     });
   }
 
+  // Un trader con un problema (es. prezzo mancante) non blocca gli altri; il lavoro
+  // finisce in errore e al prossimo giro riprova solo chi manca.
+  const failed: string[] = [];
   for (const p of active) {
-    const s = settle(byUser.get(p.id) ?? [], Number(p.cash), prices, fx, dividends, date);
-    const v = valuePortfolio(s.positions, s.cash, prices, fx);
-    await savePortfolio(db, p.id, s.positions, s.cash, v.total <= 0 ? { eliminated_on: date } : {});
-    await writeLedger(db, p.id, date, s.ledger);
-    await db.from("snapshots").upsert({ user_id: p.id, date, total: v.total, cash: s.cash });
+    try {
+      const s = settle(byUser.get(p.id) ?? [], Number(p.cash), prices, fx, dividends, date);
+      const v = valuePortfolio(s.positions, s.cash, prices, fx);
+      await savePortfolio(db, p.id, s.positions, s.cash, v.total <= 0 ? { eliminated_on: date } : {});
+      await writeLedger(db, p.id, date, s.ledger);
+      const snap = await db.from("snapshots").upsert({ user_id: p.id, date, total: v.total, cash: s.cash });
+      if (snap.error) throw snap.error;
+    } catch (err) {
+      console.error("valutazione", p.trader_name, err);
+      failed.push(`${p.trader_name}: ${(err as Error).message ?? err}`);
+    }
   }
+  if (failed.length) throw new Error(failed.join("; "));
 }
 
 /** Chiusura finestra: le formazioni inviate diventano il portafoglio attivo. */
@@ -126,16 +146,18 @@ async function commitWindow(db: SupabaseClient, w: Window) {
   for (const p of profiles) {
     if (p.eliminated_on) continue;
     const l = byUserLineup.get(p.id);
-    if (l) {
+    if (l && l.status !== "executed") {
       // Si ricontrolla il book salvato: se alla chiusura non rispetta le regole
       // (es. minimi del 5%) resta in vigore il portafoglio precedente.
       const active = byUser.get(p.id) ?? [];
       const target = l.positions as Position[];
       const { prices, fx } = await pricesFor(db, [...active, ...target], w.priceDate);
       let r: ReturnType<typeof applyLineup> | null = null;
-      try { r = applyLineup(active, Number(p.cash), target, prices, fx, { first: w.first }); } catch (e) { console.error("commit", p.id, e); }
+      let failure = "";
+      try { r = applyLineup(active, Number(p.cash), target, prices, fx, { first: w.first }); } catch (e) { failure = (e as Error).message; console.error("commit", p.id, e); }
       if (r && !r.errors.length && !r.warnings.length) {
         await savePortfolio(db, p.id, r.positions, r.cash);
+        await setOutcome(db, p.id, w.id, "executed", null);
         const orders = diffOrders(active, r.positions, prices, fx);
         if (orders.length) {
           const ins = await db.from("trades").insert(orders.map((o) => ({
@@ -147,7 +169,9 @@ async function commitWindow(db: SupabaseClient, w: Window) {
         continue;
       }
       console.error("book non valido alla chiusura", p.id, r?.errors, r?.warnings);
+      await setOutcome(db, p.id, w.id, "rejected", [failure, ...(r?.errors ?? []), ...(r?.warnings ?? [])].filter(Boolean).join(" · "));
     }
+    if (l?.status === "executed") continue;
     if (Number(p.cash) < 0) {
       const positions = byUser.get(p.id) ?? [];
       const { prices, fx } = await pricesFor(db, positions, w.priceDate);
@@ -156,4 +180,10 @@ async function commitWindow(db: SupabaseClient, w: Window) {
       await writeLedger(db, p.id, w.priceDate, r.ledger);
     }
   }
+}
+
+/** Esito degli ordini della finestra, mostrato nel Personal Book. */
+async function setOutcome(db: SupabaseClient, userId: string, windowId: number, status: "executed" | "rejected", note: string | null) {
+  const { error } = await db.from("lineups").update({ status, note }).eq("user_id", userId).eq("window_id", windowId);
+  if (error) console.error("esito ordini", error);
 }

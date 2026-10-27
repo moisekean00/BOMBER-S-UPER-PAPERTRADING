@@ -261,10 +261,19 @@ export function settle(
       continue;
     }
     if (p.kind === "option" && p.expiry && p.expiry <= date) {
-      const s = priceOf(closes, p.underlying ?? "");
-      const intrinsic = Math.max(0, p.optType === "C" ? s - (p.strike ?? 0) : (p.strike ?? 0) - s);
-      const amount = (p.qty * p.multiplier * intrinsic) / fxRate(fx, p.currency);
-      ledger.push({ symbol: p.symbol, kind: "option_expiry", amount, note: `scadenza, sottostante ${s}` });
+      const s = closes[p.underlying ?? ""];
+      let amount: number;
+      let note: string;
+      if (s !== undefined && isFinite(s)) {
+        const intrinsic = Math.max(0, p.optType === "C" ? s - (p.strike ?? 0) : (p.strike ?? 0) - s);
+        amount = (p.qty * p.multiplier * intrinsic) / fxRate(fx, p.currency);
+        note = `scadenza, sottostante ${s}`;
+      } else {
+        // Sottostante senza prezzo (es. indici con simbolo diverso da Yahoo): vale l'ultimo prezzo dell'opzione.
+        amount = notional(p, priceOf(closes, p.symbol), fx);
+        note = "scadenza, ultimo prezzo dell'opzione";
+      }
+      ledger.push({ symbol: p.symbol, kind: "option_expiry", amount, note });
       cash += amount;
       continue;
     }

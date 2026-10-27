@@ -8,7 +8,7 @@ import type { Position } from "@/lib/rules";
 import { ensureProfile } from "@/lib/game";
 import { livePrices } from "@/lib/live";
 import { standings } from "@/lib/standings";
-import { currentWindow, START_CAPITAL } from "@/lib/calendar";
+import { currentWindow, START_CAPITAL, WINDOWS } from "@/lib/calendar";
 import { eur, pctChange, cls, shortDate, initials } from "@/components/format";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +20,16 @@ export default async function MyTeamPage() {
   const db = adminClient();
   const profile = await ensureProfile(user);
   const w = currentWindow();
-  const [{ data: rows }, { data: ledger }, list, { data: draft }, { data: trades }] = await Promise.all([
+  const closed = WINDOWS.filter((x) => new Date(x.closesAt) <= new Date()).at(-1);
+  const [{ data: rows }, { data: ledger }, list, { data: draft }, { data: trades }, { data: lastLineup }] = await Promise.all([
     db.from("positions").select("*").eq("user_id", user.id),
     db.from("ledger").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
     standings(),
     w ? db.from("lineups").select("*").eq("user_id", user.id).eq("window_id", w.id).maybeSingle() : Promise.resolve({ data: null }),
     db.from("trades").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100),
+    closed ? db.from("lineups").select("*").eq("user_id", user.id).eq("window_id", closed.id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
+  const rejected = lastLineup?.status === "rejected" ? (lastLineup.note as string | null) ?? "" : null;
   const me = list.find((s) => s.profile.id === user.id);
   const positions = (rows ?? []).map(toPosition);
   const { prices, fx } = await livePrices(positions);
@@ -40,7 +43,7 @@ export default async function MyTeamPage() {
     } catch (e) { console.error("ordini in attesa", e); }
   }
   const { prices: afterPrices, fx: afterFx } = after ? await livePrices(after) : { prices, fx };
-  const closes = w ? new Date(w.closesAt).toLocaleString("it-IT", { weekday: "long", hour: "2-digit", minute: "2-digit" }) : "";
+  const closes = w ? new Date(w.closesAt).toLocaleString("it-IT", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" }) : "";
   const history: (Order & { date: string })[] = (trades ?? []).map((t) => ({
     symbol: t.symbol, name: t.name, kind: t.kind, side: t.side, qtyBefore: Number(t.qty_before), qtyAfter: Number(t.qty_after),
     price: t.price === null ? null : Number(t.price), currency: t.currency, amount: Number(t.amount), exposure: Number(t.exposure),
@@ -65,6 +68,12 @@ export default async function MyTeamPage() {
           <div className="stat"><div className="label">Posizione</div><div className="value">{me.rank}° <span className="muted" style={{ fontSize: 14, fontWeight: 500 }}>su {list.length}</span></div></div>
           <div className="stat"><div className="label">Valore ufficiale</div><div className="value num">{eur(me.official)}</div><div className={cls(me.official - START_CAPITAL)} style={{ fontWeight: 600, fontSize: 14 }}>{pctChange(me.official / START_CAPITAL - 1)}</div></div>
           <div className="stat"><div className="label">Stima live</div><div className="value num">{eur(me.live)}</div><div className="muted" style={{ fontSize: 13 }}>Cash {eur(profile.cash)}</div></div>
+        </div>
+      )}
+      {closed && rejected !== null && (
+        <div className="notice err">
+          <b>Gli ordini di {closed.label} non sono stati eseguiti</b>: alla chiusura il book non rispettava le regole, quindi è rimasto in vigore quello precedente.
+          {rejected && <div style={{ marginTop: 4 }}>Motivo: {rejected}</div>}
         </div>
       )}
       {w && after && (

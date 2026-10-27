@@ -1,9 +1,10 @@
 import "server-only";
-import { currentWindow, type Window } from "./calendar";
+import { currentWindow, VALUATION_DATES, type Window } from "./calendar";
 import { adminClient, userClient } from "./supabase/server";
 import { officialClose, officialFx, pricesFor, toPosition, toProfile } from "./db";
 import { kindMatches, parseOcc } from "./prices";
 import { applyLineup, KIND_LABEL, MARGIN_KINDS, type Kind, type Position } from "./rules";
+import { ensureState } from "./engine";
 
 /** Profilo del giocatore; se manca (iscrizione fatta prima delle tabelle) lo crea. */
 export async function ensureProfile(user: { id: string; user_metadata?: Record<string, any> }) {
@@ -88,7 +89,11 @@ export async function sanitize(raw: unknown[], active: Position[], date: string)
     }
     const prev = old.get(symbol);
     const qty = num(r.qty);
-    if (prev && prev.kind === kind) {
+    if (prev && prev.kind !== kind) {
+      errors.push(`${symbol}: è già nel book come ${KIND_LABEL[prev.kind]}, il tipo non si può cambiare`);
+      continue;
+    }
+    if (prev) {
       out.push({ ...prev, qty, leverage: kind === "etp" || MARGIN_KINDS.includes(kind) ? num(r.leverage, prev.leverage) : prev.leverage });
       continue;
     }
@@ -100,6 +105,13 @@ export async function sanitize(raw: unknown[], active: Position[], date: string)
       }
       if (kind === "option" && !i.option) {
         errors.push(`${symbol}: sono ammesse solo opzioni con codice standard (es. AAPL261218C00250000)`);
+        continue;
+      }
+      // Un'opzione che scade prima della prossima valutazione verrebbe liquidata
+      // a un prezzo successivo alla scadenza: si accettano solo scadenze dopo.
+      const nextVal = VALUATION_DATES.find((d) => d > date);
+      if (kind === "option" && i.option && nextVal && i.option.expiry < nextVal) {
+        errors.push(`${symbol}: scade il ${i.option.expiry}, prima della prossima valutazione (${nextVal})`);
         continue;
       }
       out.push({
@@ -127,6 +139,11 @@ export async function sanitize(raw: unknown[], active: Position[], date: string)
 export async function saveLineup(userId: string, raw: unknown[]) {
   const w = currentWindow();
   if (!w) return { status: 400, body: { errors: ["Il mercato è chiuso"] } };
+  // Gli ordini si calcolano sul book dopo la valutazione del venerdì: se non è ancora fatta, si fa ora.
+  if (VALUATION_DATES.includes(w.priceDate) && !(await settled(w.priceDate))) {
+    await ensureState().catch((e) => console.error("ensureState", e));
+    if (!(await settled(w.priceDate))) return { status: 503, body: { errors: ["Valutazione del venerdì in corso: riprova tra un minuto"] } };
+  }
   const ctx = await lineupContext(userId, w);
   if (ctx.profile.eliminated_on) return { status: 400, body: { errors: ["Sei stato eliminato"] } };
   if (!w.demo && !ctx.profile.paid) return { status: 400, body: { errors: ["Prima di schierare la formazione devi versare la quota a Pier"] } };
@@ -145,4 +162,9 @@ export async function saveLineup(userId: string, raw: unknown[]) {
   const { error } = await db.from("lineups").upsert({ user_id: userId, window_id: w.id, positions: r.positions, cash: r.cash, updated_at: new Date().toISOString() });
   if (error) return { status: 500, body: { errors: [error.message] } };
   return { status: 200, body: { ok: true, cash: r.cash, sold: r.sold, warnings: r.warnings } };
+}
+
+async function settled(date: string) {
+  const { data } = await adminClient().from("jobs").select("status").eq("key", `settle:${date}`).maybeSingle();
+  return data?.status === "done";
 }
