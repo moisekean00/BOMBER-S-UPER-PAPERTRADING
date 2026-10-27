@@ -8,6 +8,8 @@ import { ensureProfile, isAdmin } from "@/lib/game";
 import { migrate } from "@/lib/migrate";
 
 export const dynamic = "force-dynamic";
+// La prima visita dopo la chiusura può dover eseguire valutazione e chiusura finestra.
+export const maxDuration = 60;
 
 export default async function GameLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();

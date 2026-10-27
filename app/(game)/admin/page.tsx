@@ -61,7 +61,7 @@ export default async function AdminPage() {
                     <td className="r num">{eur(s.profile.cash)}</td>
                     <td className="r num">{eur(s.official)} <div className={cls(s.official - START_CAPITAL)} style={{ fontSize: 12 }}>{pctChange(s.official / START_CAPITAL - 1)}</div></td>
                     <td className="r num">{s.live === null ? "—" : eur(s.live)}</td>
-                    <td className="r">{d ? <span className="tag">salvati {new Date(d.updated_at).toLocaleString("it-IT", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span> : <span className="muted">—</span>}</td>
+                    <td className="r">{d ? <span className="tag">salvati {new Date(d.updated_at).toLocaleString("it-IT", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" })}</span> : <span className="muted">—</span>}</td>
                     <td className="r"><PaidToggle userId={s.profile.id} paid={s.profile.paid} /></td>
                   </tr>
                 );
@@ -105,7 +105,7 @@ export default async function AdminPage() {
               <tr key={j.key}>
                 <td>{j.key}</td>
                 <td><span className={`tag ${j.status === "error" ? "down" : ""}`}>{j.status}</span></td>
-                <td className="muted" style={{ fontSize: 12 }}>{j.error ?? new Date(j.started_at).toLocaleString("it-IT")}</td>
+                <td className="muted" style={{ fontSize: 12 }}>{j.error ?? new Date(j.started_at).toLocaleString("it-IT", { timeZone: "Europe/Rome" })}</td>
               </tr>
             ))}
           </tbody>

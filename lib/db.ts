@@ -62,8 +62,14 @@ export async function officialClose(db: SupabaseClient, symbol: string, date: st
     c = await closeOn(symbol, date);
   } catch (err) {
     // Opzioni senza scambi: si usa l'ultimo prezzo disponibile (media domanda/offerta per Yahoo).
-    const q = (await quotes([symbol]))[0];
-    if (!q || !q.price) throw err;
+    const q = (await quotes([symbol]).catch(() => []))[0];
+    if (!q || !q.price) {
+      // Yahoo non risponde: vale l'ultima chiusura già in archivio, senza salvarla
+      // sotto la nuova data (al prossimo tentativo si riprova con Yahoo).
+      const { data: last } = await db.from("prices").select("close,currency").eq("symbol", symbol).lte("date", date).order("date", { ascending: false }).limit(1).maybeSingle();
+      if (last) return { price: Number(last.close), currency: last.currency as string };
+      throw err;
+    }
     c = { price: q.price, currency: q.currency };
   }
   await db.from("prices").upsert({ symbol, date, close: c.price, currency: c.currency });

@@ -66,6 +66,10 @@ create table if not exists lineups (
   primary key (user_id, window_id)
 );
 
+-- Esito alla chiusura: eseguiti o scartati, con il motivo (aggiunto il 27/10).
+alter table lineups add column if not exists status text;
+alter table lineups add column if not exists note text;
+
 -- Chiusure ufficiali usate per finestre e valutazioni (una per simbolo e data).
 create table if not exists prices (
   symbol text not null,
@@ -138,3 +142,8 @@ drop policy if exists "read snapshots" on snapshots;
 create policy "read snapshots" on snapshots for select to authenticated using (true);
 drop policy if exists "read ledger" on ledger;
 create policy "read ledger" on ledger for select to authenticated using (true);
+
+-- Il primo iscritto diventa commissario se nessuno lo è ancora.
+update profiles set is_admin = true
+where id = (select id from profiles order by created_at limit 1)
+  and not exists (select 1 from profiles where is_admin);

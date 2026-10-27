@@ -26,7 +26,7 @@ export default async function TeamsPage() {
       <div className="card">
         <div className="eyebrow">Traders</div>
         <h1 style={{ margin: 0, fontSize: "1.8rem" }}>I book di tutti i trader</h1>
-        <p className="muted" style={{ margin: "6px 0 0" }}>I book attivi di tutti. Durante il mercato vedi chi ha inserito ordini (🔒), ma cosa ha comprato si scopre solo alla chiusura{w ? ` di ${new Date(w.closesAt).toLocaleString("it-IT", { weekday: "long", hour: "2-digit", minute: "2-digit" })}` : ""}. Sul tuo book vedi i tuoi ordini in attesa.</p>
+        <p className="muted" style={{ margin: "6px 0 0" }}>I book attivi di tutti. Durante il mercato vedi chi ha inserito ordini (🔒), ma cosa ha comprato si scopre solo alla chiusura{w ? ` di ${new Date(w.closesAt).toLocaleString("it-IT", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" })}` : ""}. Sul tuo book vedi i tuoi ordini in attesa.</p>
       </div>
       <div className="teams">
         {list.map((s) => {

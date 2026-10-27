@@ -163,7 +163,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: { 
             {feed.slice(0, 15).map((n) => (
               <a key={n.id} href={n.link} target="_blank" rel="noreferrer">
                 <div className="t" style={{ fontWeight: 600 }}>{n.title}</div>
-                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{n.publisher} · {new Date(n.time).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {n.tickers.slice(0, 3).join(", ")}</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{n.publisher} · {new Date(n.time).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" })} · {n.tickers.slice(0, 3).join(", ")}</div>
               </a>
             ))}
           </div>

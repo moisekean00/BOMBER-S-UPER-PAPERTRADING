@@ -11,7 +11,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Servono email, password di almeno 6 caratteri e un nome da trader (2-24 caratteri)" }, { status: 400 });
   }
   const db = adminClient();
-  const { data: taken } = await db.from("profiles").select("id").ilike("trader_name", name).maybeSingle();
+  const { data: taken } = await db.from("profiles").select("id").ilike("trader_name", name.replace(/[%_\\]/g, "\\$&")).limit(1).maybeSingle();
+  if (taken) {
+    // Stesso nome (anche con maiuscole diverse) già usato da un altro account.
+    const { data: owner } = await db.auth.admin.getUserById(taken.id);
+    if (owner?.user?.email?.toLowerCase() !== mail) {
+      return NextResponse.json({ error: "Questo nome da trader è già preso, scegline un altro" }, { status: 400 });
+    }
+  }
 
   const created = await db.auth.admin.createUser({ email: mail, password, email_confirm: true, user_metadata: { trader_name: name } });
   if (!created.error) return NextResponse.json({ ok: true });
